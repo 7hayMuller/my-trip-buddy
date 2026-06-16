@@ -5,6 +5,17 @@ const URL  = process.env.EXPO_PUBLIC_SUPABASE_URL  ?? '';
 const KEY  = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const DEVICE_KEY = '@wanderlust_device_id';
 
+// Durante o build estático do web (Expo `output: "static"`), este módulo é
+// avaliado em Node puro, que não tem `WebSocket` global. O Supabase cria o
+// cliente Realtime mesmo sem uso de `.channel()`, então passamos um stub
+// nesse caso só para evitar o erro — RN e browsers sempre têm WebSocket nativo.
+class NoopWebSocket {
+  close() {}
+  send() {}
+  addEventListener() {}
+  removeEventListener() {}
+}
+
 export const supabase = URL && KEY
   ? createClient(URL, KEY, {
       auth: {
@@ -13,6 +24,9 @@ export const supabase = URL && KEY
         persistSession: false,
         detectSessionInUrl: false,
       },
+      realtime: typeof WebSocket === 'undefined'
+        ? { transport: NoopWebSocket as any }
+        : undefined,
     })
   : null;
 
