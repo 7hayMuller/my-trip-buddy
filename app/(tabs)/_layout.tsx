@@ -1,56 +1,65 @@
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconHome } from "@/components/IconHome";
-import { IconPlane } from "@/components/IconPlane";
+import { IconSuitcase } from "@/components/IconSuitcase";
+import { useAuth } from "@/hooks/useAuth";
 import { colors } from "@/theme";
 
 export default function TabLayout() {
+  const { logout } = useAuth();
+  const nav = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    nav.replace('/login');
+  };
+
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.blush,
-        tabBarInactiveTintColor: colors.muted,
+        tabBarInactiveTintColor: colors.navy,
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: () => (
           <View style={{ flex: 1 }}>
             <LinearGradient
-              colors={[colors.navy, colors.navy2]}
+              colors={[colors.offwhite, colors.cream]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={StyleSheet.absoluteFillObject}
-            />
-            {/* Top border accent */}
-            <View
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 2,
-                background: `linear-gradient(90deg, ${colors.blush}, ${colors.sage}, ${colors.teal})`,
-              }}
             />
           </View>
         ),
         tabBarStyle: {
           borderTopWidth: 0,
           backgroundColor: 'transparent',
-          elevation: 20,
-          height: 80,
+          elevation: 12,
+          height: 100,
           paddingBottom: 12,
-          paddingTop: 12,
+          paddingTop: 8,
           borderRadius: 0,
+          flexDirection: 'row',
+          shadowColor: colors.navy,
+          shadowOffset: { width: 0, height: -4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
         },
+        tabBarLabelPosition: 'below-icon',
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '800',
-          marginTop: 6,
+          marginTop: 4,
           letterSpacing: 0.5,
+          color: colors.navy,
+        },
+        tabBarIconStyle: {
+          marginBottom: 4,
         },
       }}
     >
@@ -91,9 +100,40 @@ export default function TabLayout() {
                 transition: 'all 0.3s ease',
               }}
             >
-              <IconPlane color={color} size={focused ? 32 : 28} />
+              <IconSuitcase color={color} size={focused ? 32 : 28} />
             </View>
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Perfil",
+          tabBarIcon: ({ color, focused }) => (
+            <View
+              style={{
+                width: 56,
+                height: 56,
+                borderRadius: 20,
+                backgroundColor: focused ? `${color}25` : 'transparent',
+                justifyContent: 'center',
+                alignItems: 'center',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              <Ionicons
+                name={focused ? "person" : "person-outline"}
+                size={focused ? 32 : 28}
+                color={color}
+              />
+            </View>
+          ),
+          listeners: {
+            tabPress: (e) => {
+              e.preventDefault();
+              handleLogout();
+            },
+          },
         }}
       />
     </Tabs>

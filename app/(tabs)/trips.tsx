@@ -1,8 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
 import { differenceInDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LinearGradient } from "expo-linear-gradient";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
@@ -21,14 +21,14 @@ import { useTrips } from "../../hooks/useTrips";
 import { colors, radius, shadow, spacing } from "../../theme";
 import { FlightEntry, HotelEntry, Trip } from "../../types";
 import { getDefaultCheckItems } from "../../utils/storage";
-import { getVisaWarnings, VisaWarning } from "../../utils/visa";
+import { getVisaWarnings } from "../../utils/visa";
 
 // ─── step config ──────────────────────────────────────────────────────────────
 
 const STEPS = [
-  { title: "nova viagem", subtitle: "Sobre a viagem e datas" },
-  { title: "voos e hotéis", subtitle: "Suas reservas por destino" },
-  { title: "revisão", subtitle: "Confirme os dados" },
+  { title: "Sobre sua viagem", subtitle: "Para onde você vai e quando" },
+  { title: "Voos e hotéis", subtitle: "Suas reservas por destino" },
+  { title: "Revisão", subtitle: "Confirme os dados" },
 ] as const;
 
 // ─── date mask: auto-inserts dashes → AAAA-MM-DD ──────────────────────────────
@@ -72,7 +72,7 @@ const ProgressBar = ({ step, total }: { step: number; total: number }) => {
       />
     </View>
   );
-}
+};
 
 function Label({ text, hint }: { text: string; hint?: string }) {
   return (
@@ -86,13 +86,23 @@ function Label({ text, hint }: { text: string; hint?: string }) {
 function TipBox({ text }: { text: string }) {
   return (
     <View style={s.tip}>
-      <Ionicons name="information-circle-outline" size={15} color={colors.teal2} />
+      <Ionicons
+        name="information-circle-outline"
+        size={15}
+        color={colors.teal2}
+      />
       <Text style={s.tipText}>{text}</Text>
     </View>
   );
 }
 
-function DestChip({ label, onRemove }: { label: string; onRemove: () => void }) {
+function DestChip({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove: () => void;
+}) {
   return (
     <View style={s.destChip}>
       <Ionicons name="location" size={10} color={colors.white} />
@@ -126,13 +136,21 @@ function NavButtons({
   return (
     <View style={s.navRow}>
       {step > 1 && (
-        <TouchableOpacity style={s.navBack} onPress={onBack} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={s.navBack}
+          onPress={onBack}
+          activeOpacity={0.8}
+        >
           <Ionicons name="arrow-back" size={16} color={colors.navy} />
           <Text style={s.navBackText}>voltar</Text>
         </TouchableOpacity>
       )}
       <LinearGradient
-        colors={step === total ? [colors.blush, colors.accent] : [colors.sage, colors.teal]}
+        colors={
+          step === total
+            ? [colors.blush, colors.accent]
+            : [colors.sage, colors.teal]
+        }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[s.navNextGrad]}
@@ -168,11 +186,11 @@ function CloudTop() {
 }
 
 const CAT_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  doc:  { bg: colors.greenLight,   text: colors.green,   label: "docs"  },
-  fly:  { bg: colors.purpleLight,  text: colors.purple,  label: "voo"   },
-  stay: { bg: colors.goldLight,    text: colors.gold,    label: "hotel" },
-  look: { bg: colors.accentLight,  text: colors.accent,  label: "looks" },
-  misc: { bg: colors.offwhite,     text: colors.muted,   label: "outro" },
+  doc: { bg: colors.greenLight, text: colors.green, label: "docs" },
+  fly: { bg: colors.purpleLight, text: colors.purple, label: "voo" },
+  stay: { bg: colors.goldLight, text: colors.gold, label: "hotel" },
+  look: { bg: colors.accentLight, text: colors.accent, label: "looks" },
+  misc: { bg: colors.offwhite, text: colors.muted, label: "outro" },
   visa: { bg: colors.warningLight, text: colors.warning, label: "visto" },
 };
 
@@ -202,7 +220,12 @@ export default function AddTripScreen() {
   const [flights, setFlights] = useState<FlightEntry[]>(() => {
     if (existing?.flights?.length) return existing.flights;
     if (existing?.flightNumber)
-      return [{ flightNumber: String(existing.flightNumber), dest: initialDests[0] ?? "" }];
+      return [
+        {
+          flightNumber: String(existing.flightNumber),
+          dest: initialDests[0] ?? "",
+        },
+      ];
     return [{ flightNumber: "", dest: initialDests[0] ?? "" }];
   });
 
@@ -210,7 +233,13 @@ export default function AddTripScreen() {
   const [hotels, setHotels] = useState<HotelEntry[]>(() => {
     if (existing?.hotels?.length) return existing.hotels;
     if (existing?.hotelName)
-      return [{ name: existing.hotelName, conf: existing.hotelConf ?? "", dest: initialDests[0] ?? "" }];
+      return [
+        {
+          name: existing.hotelName,
+          conf: existing.hotelConf ?? "",
+          dest: initialDests[0] ?? "",
+        },
+      ];
     return [{ name: "", conf: "", dest: initialDests[0] ?? "" }];
   });
 
@@ -220,14 +249,22 @@ export default function AddTripScreen() {
     try {
       return Math.max(
         0,
-        differenceInDays(new Date(ret + "T00:00:00"), new Date(depart + "T00:00:00")),
+        differenceInDays(
+          new Date(ret + "T00:00:00"),
+          new Date(depart + "T00:00:00"),
+        ),
       );
-    } catch { return 0; }
+    } catch {
+      return 0;
+    }
   })();
 
   const fmtDate = (d: string) => {
-    try { return format(new Date(d + "T00:00:00"), "d 'de' MMM", { locale: ptBR }); }
-    catch { return d; }
+    try {
+      return format(new Date(d + "T00:00:00"), "d 'de' MMM", { locale: ptBR });
+    } catch {
+      return d;
+    }
   };
 
   const addDest = () => {
@@ -239,13 +276,15 @@ export default function AddTripScreen() {
 
   const updateFlight = (i: number, key: keyof FlightEntry, val: string) =>
     setFlights((p) => p.map((f, j) => (j === i ? { ...f, [key]: val } : f)));
-  const removeFlight = (i: number) => setFlights((p) => p.filter((_, j) => j !== i));
+  const removeFlight = (i: number) =>
+    setFlights((p) => p.filter((_, j) => j !== i));
   const addFlight = () =>
     setFlights((p) => [...p, { flightNumber: "", dest: dests[0] ?? "" }]);
 
   const updateHotel = (i: number, key: keyof HotelEntry, val: string) =>
     setHotels((p) => p.map((h, j) => (j === i ? { ...h, [key]: val } : h)));
-  const removeHotel = (i: number) => setHotels((p) => p.filter((_, j) => j !== i));
+  const removeHotel = (i: number) =>
+    setHotels((p) => p.filter((_, j) => j !== i));
   const addHotel = () =>
     setHotels((p) => [...p, { name: "", conf: "", dest: dests[0] ?? "" }]);
 
@@ -253,8 +292,14 @@ export default function AddTripScreen() {
 
   const validateStep = (n: number): boolean => {
     if (n === 1) {
-      if (!name.trim()) { Alert.alert("Ops!", "Dê um nome para a viagem."); return false; }
-      if (!depart)      { Alert.alert("Ops!", "Informe a data de partida."); return false; }
+      if (!name.trim()) {
+        Alert.alert("Ops!", "Dê um nome para a viagem.");
+        return false;
+      }
+      if (!depart) {
+        Alert.alert("Ops!", "Informe a data de partida.");
+        return false;
+      }
     }
     if (n === 2) {
       if (!flights.some((f) => f.flightNumber.trim())) {
@@ -279,7 +324,7 @@ export default function AddTripScreen() {
 
   const save = async () => {
     const cleanFlights = flights.filter((f) => f.flightNumber.trim());
-    const cleanHotels  = hotels.filter((h) => h.name.trim());
+    const cleanHotels = hotels.filter((h) => h.name.trim());
     const tripData: Omit<Trip, "id"> = {
       name: name.trim(),
       destinations: dests.length ? dests : ["Destino"],
@@ -287,11 +332,11 @@ export default function AddTripScreen() {
       ret: ret || depart,
       origin: origin.trim() || "Brasil",
       flightNumber: cleanFlights[0]?.flightNumber ?? "",
-      hotelName:    cleanHotels[0]?.name ?? "",
-      hotelConf:    cleanHotels[0]?.conf ?? "",
+      hotelName: cleanHotels[0]?.name ?? "",
+      hotelConf: cleanHotels[0]?.conf ?? "",
       segments: [{ from: "", fromCity: "", to: "", toCity: "" }],
       flights: cleanFlights,
-      hotels:  cleanHotels,
+      hotels: cleanHotels,
     };
     if (isEdit && existing) {
       await updateTrip(existing.id, tripData);
@@ -308,7 +353,10 @@ export default function AddTripScreen() {
         text: "Excluir",
         style: "destructive",
         onPress: async () => {
-          if (existing) { await deleteTrip(existing.id); nav.back(); }
+          if (existing) {
+            await deleteTrip(existing.id);
+            nav.back();
+          }
         },
       },
     ]);
@@ -357,7 +405,6 @@ export default function AddTripScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-
           {/* ────── STEP 1: nome, destinos, datas ────── */}
           {step === 1 && (
             <>
@@ -381,7 +428,9 @@ export default function AddTripScreen() {
                       <DestChip
                         key={i}
                         label={d}
-                        onRemove={() => setDests((p) => p.filter((_, j) => j !== i))}
+                        onRemove={() =>
+                          setDests((p) => p.filter((_, j) => j !== i))
+                        }
                       />
                     ))}
                   </View>
@@ -404,7 +453,10 @@ export default function AddTripScreen() {
 
               <SectionLabel text="passaporte / origem" />
               <View style={s.card}>
-                <Label text="país do seu passaporte" hint="usado para verificar necessidade de visto" />
+                <Label
+                  text="país do seu passaporte"
+                  hint="usado para verificar necessidade de visto"
+                />
                 <TextInput
                   style={s.input}
                   value={origin}
@@ -445,7 +497,11 @@ export default function AddTripScreen() {
                 </View>
                 {nights > 0 && (
                   <View style={s.nightsBadge}>
-                    <Ionicons name="moon-outline" size={12} color={colors.teal2} />
+                    <Ionicons
+                      name="moon-outline"
+                      size={12}
+                      color={colors.teal2}
+                    />
                     <Text style={s.nightsBadgeText}>{nights} noites</Text>
                   </View>
                 )}
@@ -472,8 +528,15 @@ export default function AddTripScreen() {
                   <View style={s.entryHeader}>
                     <Text style={s.entryTitle}>voo {i + 1}</Text>
                     {flights.length > 1 && (
-                      <TouchableOpacity onPress={() => removeFlight(i)} hitSlop={8}>
-                        <Ionicons name="trash-outline" size={15} color={colors.accent} />
+                      <TouchableOpacity
+                        onPress={() => removeFlight(i)}
+                        hitSlop={8}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={15}
+                          color={colors.accent}
+                        />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -489,10 +552,18 @@ export default function AddTripScreen() {
                         {dests.map((d, di) => (
                           <TouchableOpacity
                             key={di}
-                            style={[s.destPill, f.dest === d && s.destPillActive]}
+                            style={[
+                              s.destPill,
+                              f.dest === d && s.destPillActive,
+                            ]}
                             onPress={() => updateFlight(i, "dest", d)}
                           >
-                            <Text style={[s.destPillText, f.dest === d && s.destPillTextActive]}>
+                            <Text
+                              style={[
+                                s.destPillText,
+                                f.dest === d && s.destPillTextActive,
+                              ]}
+                            >
                               {d}
                             </Text>
                           </TouchableOpacity>
@@ -512,7 +583,9 @@ export default function AddTripScreen() {
                     <TextInput
                       style={[s.input, s.inputIcon]}
                       value={f.flightNumber}
-                      onChangeText={(t) => updateFlight(i, "flightNumber", t.toUpperCase())}
+                      onChangeText={(t) =>
+                        updateFlight(i, "flightNumber", t.toUpperCase())
+                      }
                       placeholder="ex: JL047, G3 1234, LA8082"
                       placeholderTextColor={colors.muted}
                       autoCapitalize="characters"
@@ -524,7 +597,11 @@ export default function AddTripScreen() {
               ))}
 
               <TouchableOpacity style={s.addEntryBtn} onPress={addFlight}>
-                <Ionicons name="add-circle-outline" size={16} color={colors.teal2} />
+                <Ionicons
+                  name="add-circle-outline"
+                  size={16}
+                  color={colors.teal2}
+                />
                 <Text style={s.addEntryText}>adicionar voo</Text>
               </TouchableOpacity>
 
@@ -536,8 +613,15 @@ export default function AddTripScreen() {
                   <View style={s.entryHeader}>
                     <Text style={s.entryTitle}>hotel {i + 1}</Text>
                     {hotels.length > 1 && (
-                      <TouchableOpacity onPress={() => removeHotel(i)} hitSlop={8}>
-                        <Ionicons name="trash-outline" size={15} color={colors.accent} />
+                      <TouchableOpacity
+                        onPress={() => removeHotel(i)}
+                        hitSlop={8}
+                      >
+                        <Ionicons
+                          name="trash-outline"
+                          size={15}
+                          color={colors.accent}
+                        />
                       </TouchableOpacity>
                     )}
                   </View>
@@ -553,10 +637,18 @@ export default function AddTripScreen() {
                         {dests.map((d, di) => (
                           <TouchableOpacity
                             key={di}
-                            style={[s.destPill, h.dest === d && s.destPillActive]}
+                            style={[
+                              s.destPill,
+                              h.dest === d && s.destPillActive,
+                            ]}
                             onPress={() => updateHotel(i, "dest", d)}
                           >
-                            <Text style={[s.destPillText, h.dest === d && s.destPillTextActive]}>
+                            <Text
+                              style={[
+                                s.destPillText,
+                                h.dest === d && s.destPillTextActive,
+                              ]}
+                            >
                               {d}
                             </Text>
                           </TouchableOpacity>
@@ -587,7 +679,9 @@ export default function AddTripScreen() {
                   <TextInput
                     style={s.input}
                     value={h.conf}
-                    onChangeText={(t) => updateHotel(i, "conf", t.toUpperCase())}
+                    onChangeText={(t) =>
+                      updateHotel(i, "conf", t.toUpperCase())
+                    }
                     placeholder="ex: BK-39482910"
                     placeholderTextColor={colors.muted}
                     autoCapitalize="characters"
@@ -597,7 +691,11 @@ export default function AddTripScreen() {
               ))}
 
               <TouchableOpacity style={s.addEntryBtn} onPress={addHotel}>
-                <Ionicons name="add-circle-outline" size={16} color={colors.teal2} />
+                <Ionicons
+                  name="add-circle-outline"
+                  size={16}
+                  color={colors.teal2}
+                />
                 <Text style={s.addEntryText}>adicionar hotel</Text>
               </TouchableOpacity>
 
@@ -633,7 +731,11 @@ export default function AddTripScreen() {
                     <View style={s.chipsWrap}>
                       {dests.map((d, i) => (
                         <View key={i} style={s.destChipReview}>
-                          <Ionicons name="location" size={10} color={colors.teal2} />
+                          <Ionicons
+                            name="location"
+                            size={10}
+                            color={colors.teal2}
+                          />
                           <Text style={s.destChipReviewText}>{d}</Text>
                         </View>
                       ))}
@@ -651,11 +753,22 @@ export default function AddTripScreen() {
                       .map((f, i, arr) => (
                         <View
                           key={i}
-                          style={[s.reviewRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}
+                          style={[
+                            s.reviewRow,
+                            i === arr.length - 1 && { borderBottomWidth: 0 },
+                          ]}
                         >
-                          <Ionicons name="airplane-outline" size={14} color={colors.muted} />
-                          <Text style={s.reviewLabel}>{f.dest || `voo ${i + 1}`}</Text>
-                          <Text style={[s.reviewValue, { color: colors.teal }]}>{f.flightNumber}</Text>
+                          <Ionicons
+                            name="airplane-outline"
+                            size={14}
+                            color={colors.muted}
+                          />
+                          <Text style={s.reviewLabel}>
+                            {f.dest || `voo ${i + 1}`}
+                          </Text>
+                          <Text style={[s.reviewValue, { color: colors.teal }]}>
+                            {f.flightNumber}
+                          </Text>
                         </View>
                       ))}
                   </View>
@@ -671,28 +784,48 @@ export default function AddTripScreen() {
                       .map((h, i, arr) => (
                         <View
                           key={i}
-                          style={[s.reviewRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}
+                          style={[
+                            s.reviewRow,
+                            i === arr.length - 1 && { borderBottomWidth: 0 },
+                          ]}
                         >
-                          <Ionicons name="business-outline" size={14} color={colors.muted} />
-                          <Text style={s.reviewLabel}>{h.dest || `hotel ${i + 1}`}</Text>
-                          <Text style={s.reviewValue} numberOfLines={1}>{h.name}</Text>
+                          <Ionicons
+                            name="business-outline"
+                            size={14}
+                            color={colors.muted}
+                          />
+                          <Text style={s.reviewLabel}>
+                            {h.dest || `hotel ${i + 1}`}
+                          </Text>
+                          <Text style={s.reviewValue} numberOfLines={1}>
+                            {h.name}
+                          </Text>
                         </View>
                       ))}
                   </View>
                 </>
               )}
 
-              {(getVisaWarnings(dests, origin)).length > 0 && (
+              {getVisaWarnings(dests, origin).length > 0 && (
                 <View style={s.visaCard}>
                   <View style={s.visaHeader}>
-                    <Ionicons name="alert-circle" size={16} color={colors.warning} />
-                    <Text style={s.visaTitle}>atenção: visto pode ser necessário</Text>
+                    <Ionicons
+                      name="alert-circle"
+                      size={16}
+                      color={colors.warning}
+                    />
+                    <Text style={s.visaTitle}>
+                      atenção: visto pode ser necessário
+                    </Text>
                   </View>
                   {getVisaWarnings(dests, origin).map((w, i) => (
-                    <Text key={i} style={s.visaMsg}>• {w.message}</Text>
+                    <Text key={i} style={s.visaMsg}>
+                      • {w.message}
+                    </Text>
                   ))}
                   <Text style={s.visaTip}>
-                    Itens "solicitar visto" serão adicionados ao checklist automaticamente.
+                    Itens &quot;solicitar visto&quot; serão adicionados ao
+                    checklist automaticamente.
                   </Text>
                 </View>
               )}
@@ -702,11 +835,20 @@ export default function AddTripScreen() {
                 {(() => {
                   const visaItems = getVisaWarnings(dests, origin);
                   const allItems = [
-                    ...getDefaultCheckItems({ destinations: dests, hotels, flights }),
-                    ...visaItems.map((w) => ({ cat: 'visa', text: `Solicitar visto — ${w.message.split(':')[0]}` })),
+                    ...getDefaultCheckItems({
+                      destinations: dests,
+                      hotels,
+                      flights,
+                    }),
+                    ...visaItems.map((w) => ({
+                      cat: "visa",
+                      text: `Solicitar visto — ${w.message.split(":")[0]}`,
+                    })),
                   ];
                   return allItems.map((item, i) => {
-                    const cs = CAT_STYLE[item.cat as keyof typeof CAT_STYLE] ?? CAT_STYLE.misc;
+                    const cs =
+                      CAT_STYLE[item.cat as keyof typeof CAT_STYLE] ??
+                      CAT_STYLE.misc;
                     const isLast = i === allItems.length - 1;
                     return (
                       <View
@@ -716,7 +858,9 @@ export default function AddTripScreen() {
                         <View style={s.checkCircle} />
                         <Text style={s.checkText}>{item.text}</Text>
                         <View style={[s.catPill, { backgroundColor: cs.bg }]}>
-                          <Text style={[s.catPillText, { color: cs.text }]}>{cs.label}</Text>
+                          <Text style={[s.catPillText, { color: cs.text }]}>
+                            {cs.label}
+                          </Text>
                         </View>
                       </View>
                     );
@@ -764,28 +908,47 @@ const s = StyleSheet.create({
     justifyContent: "center",
     backdropFilter: "blur(10px)",
   },
-  headerTitle: { fontSize: 24, fontWeight: "900", color: colors.white, fontStyle: "italic" },
-  headerSub:   { fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: "600", marginTop: 2 },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: colors.white,
+    fontStyle: "italic",
+  },
+  headerSub: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.8)",
+    fontWeight: "600",
+    marginTop: 2,
+  },
 
   dotsRow: { flexDirection: "row", gap: 5 },
-  dot: { flex: 1, height: 3, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.15)" },
-  dotDone:   { backgroundColor: colors.sage },
+  dot: {
+    flex: 1,
+    height: 3,
+    borderRadius: 3,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+  dotDone: { backgroundColor: colors.sage },
   dotActive: { backgroundColor: "rgba(255,255,255,0.6)" },
 
   progressContainer: {
     height: 4,
     backgroundColor: "rgba(255,255,255,0.2)",
     borderRadius: 2,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginTop: spacing.sm,
   },
   progressBar: {
-    height: '100%',
+    height: "100%",
     borderRadius: 2,
   },
 
   sheet: { flex: 1, backgroundColor: colors.offwhite },
-  sheetContent: { paddingHorizontal: spacing.lg, paddingTop: 4, paddingBottom: 20 },
+  sheetContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: 4,
+    paddingBottom: 20,
+  },
 
   secLabel: {
     fontSize: 10,
@@ -806,8 +969,18 @@ const s = StyleSheet.create({
     ...shadow.sm,
   },
 
-  label: { fontSize: 12, fontWeight: "800", color: colors.navy, marginBottom: 3 },
-  hint:  { fontSize: 10, color: colors.muted, fontWeight: "600", marginBottom: 5 },
+  label: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.navy,
+    marginBottom: 3,
+  },
+  hint: {
+    fontSize: 10,
+    color: colors.muted,
+    fontWeight: "600",
+    marginBottom: 5,
+  },
 
   input: {
     backgroundColor: colors.offwhite,
@@ -820,8 +993,8 @@ const s = StyleSheet.create({
     color: colors.navy,
   },
   iconInputWrap: { position: "relative" },
-  iconInput:     { position: "absolute", left: 11, top: 12, zIndex: 1 },
-  inputIcon:     { paddingLeft: 36 },
+  iconInput: { position: "absolute", left: 11, top: 12, zIndex: 1 },
+  inputIcon: { paddingLeft: 36 },
 
   tip: {
     flexDirection: "row",
@@ -832,9 +1005,20 @@ const s = StyleSheet.create({
     padding: spacing.sm,
     marginTop: spacing.sm,
   },
-  tipText: { fontSize: 11, color: colors.teal2, fontWeight: "700", flex: 1, lineHeight: 16 },
+  tipText: {
+    fontSize: 11,
+    color: colors.teal2,
+    fontWeight: "700",
+    flex: 1,
+    lineHeight: 16,
+  },
 
-  chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 5, marginBottom: spacing.sm },
+  chipsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 5,
+    marginBottom: spacing.sm,
+  },
   destChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -845,9 +1029,9 @@ const s = StyleSheet.create({
     backgroundColor: colors.navy,
   },
   destChipText: { fontSize: 11, fontWeight: "700", color: colors.white },
-  destChipX:    { fontSize: 15, color: "rgba(255,255,255,0.6)", lineHeight: 16 },
+  destChipX: { fontSize: 15, color: "rgba(255,255,255,0.6)", lineHeight: 16 },
 
-  destRow:   { flexDirection: "row", gap: 8, alignItems: "center" },
+  destRow: { flexDirection: "row", gap: 8, alignItems: "center" },
   addDestBtn: {
     width: 38,
     height: 38,
@@ -903,9 +1087,9 @@ const s = StyleSheet.create({
     backgroundColor: colors.offwhite,
     marginRight: spacing.sm,
   },
-  destPillActive:      { backgroundColor: colors.navy, borderColor: colors.navy },
-  destPillText:        { fontSize: 11, fontWeight: "700", color: colors.muted },
-  destPillTextActive:  { color: colors.white },
+  destPillActive: { backgroundColor: colors.navy, borderColor: colors.navy },
+  destPillText: { fontSize: 11, fontWeight: "700", color: colors.muted },
+  destPillTextActive: { color: colors.white },
 
   navRow: { flexDirection: "row", gap: 8, marginTop: spacing.md },
   navBack: {
@@ -924,11 +1108,11 @@ const s = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  navBackText:  { fontSize: 13, fontWeight: "800", color: colors.navy },
+  navBackText: { fontSize: 13, fontWeight: "800", color: colors.navy },
   navNextGrad: {
     flex: 1,
     borderRadius: radius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
     shadowColor: colors.blush,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
@@ -982,7 +1166,12 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  reviewLabel: { fontSize: 11, color: colors.muted, fontWeight: "600", flex: 1 },
+  reviewLabel: {
+    fontSize: 11,
+    color: colors.muted,
+    fontWeight: "600",
+    flex: 1,
+  },
   reviewValue: { fontSize: 12, fontWeight: "800", color: colors.navy },
 
   checkRow: {
@@ -1001,8 +1190,12 @@ const s = StyleSheet.create({
     borderColor: colors.border,
     flexShrink: 0,
   },
-  checkText:   { flex: 1, fontSize: 12, fontWeight: "700", color: colors.navy },
-  catPill:     { paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.full },
+  checkText: { flex: 1, fontSize: 12, fontWeight: "700", color: colors.navy },
+  catPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
   catPillText: { fontSize: 9, fontWeight: "800" },
 
   visaCard: {
@@ -1019,7 +1212,23 @@ const s = StyleSheet.create({
     gap: 6,
     marginBottom: spacing.sm,
   },
-  visaTitle: { fontSize: 12, fontWeight: "800", color: colors.warning, flex: 1 },
-  visaMsg:   { fontSize: 11, fontWeight: "600", color: colors.warning, marginBottom: 3 },
-  visaTip:   { fontSize: 10, color: colors.warning, fontWeight: "600", marginTop: spacing.xs, opacity: 0.8 },
+  visaTitle: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.warning,
+    flex: 1,
+  },
+  visaMsg: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: colors.warning,
+    marginBottom: 3,
+  },
+  visaTip: {
+    fontSize: 10,
+    color: colors.warning,
+    fontWeight: "600",
+    marginTop: spacing.xs,
+    opacity: 0.8,
+  },
 });
