@@ -2,9 +2,10 @@ import { Tabs } from "expo-router";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
-import { Ionicons } from "@expo/vector-icons";
 
 import { HapticTab } from "@/components/haptic-tab";
+import { IconHome } from "@/components/IconHome";
+import { IconPlane } from "@/components/IconPlane";
 import { colors } from "@/theme";
 
 export default function TabLayout() {
@@ -60,20 +61,16 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 48,
-                height: 48,
-                borderRadius: 16,
-                backgroundColor: focused ? `${color}20` : 'transparent',
+                width: 56,
+                height: 56,
+                borderRadius: 20,
+                backgroundColor: focused ? `${color}25` : 'transparent',
                 justifyContent: 'center',
                 alignItems: 'center',
                 transition: 'all 0.3s ease',
               }}
             >
-              <Ionicons
-                name={focused ? "home" : "home-outline"}
-                size={focused ? 28 : 24}
-                color={color}
-              />
+              <IconHome color={color} size={focused ? 32 : 28} />
             </View>
           ),
         }}
@@ -85,20 +82,16 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View
               style={{
-                width: 48,
-                height: 48,
-                borderRadius: 16,
-                backgroundColor: focused ? `${color}20` : 'transparent',
+                width: 56,
+                height: 56,
+                borderRadius: 20,
+                backgroundColor: focused ? `${color}25` : 'transparent',
                 justifyContent: 'center',
                 alignItems: 'center',
                 transition: 'all 0.3s ease',
               }}
             >
-              <Ionicons
-                name={focused ? "airplane" : "airplane-outline"}
-                size={focused ? 28 : 24}
-                color={color}
-              />
+              <IconPlane color={color} size={focused ? 32 : 28} />
             </View>
           ),
         }}
