@@ -19,6 +19,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CloudDivider from "../../components/CloudDivider";
 import PlaneRoute from "../../components/PlaneRoute";
+import { EmptyStateTrips } from "../../components/EmptyStateTrips";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useTrips } from "../../hooks/useTrips";
 import { colors, getTripImage, radius, shadow, spacing } from "../../theme";
@@ -150,6 +151,11 @@ export default function HomeScreen() {
     extrapolate: 'clamp',
   });
 
+  // Show empty state when no trips
+  if (trips.length === 0) {
+    return <EmptyStateTrips />;
+  }
+
   const doneChecks = activeChecks.filter((c: CheckItem) => c.done).length;
   const nights = activeTrip
     ? Math.max(
@@ -218,20 +224,28 @@ export default function HomeScreen() {
               </Text>
             )}
           </View>
-          <TouchableOpacity
-            style={s.editBtn}
-            onPress={() =>
-              activeTrip
-                ? nav.push({ pathname: "/trips", params: { tripId: activeTrip.id } })
-                : nav.push("/trips")
-            }
+          <LinearGradient
+            colors={[colors.blush, colors.accent]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.editBtnGrad}
           >
-            <Ionicons
-              name={activeTrip ? "pencil" : "add"}
-              size={15}
-              color="rgba(255,255,255,0.8)"
-            />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={s.editBtn}
+              onPress={() =>
+                activeTrip
+                  ? nav.push({ pathname: "/trips", params: { tripId: activeTrip.id } })
+                  : nav.push("/trips")
+              }
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={activeTrip ? "pencil" : "add"}
+                size={15}
+                color={colors.white}
+              />
+            </TouchableOpacity>
+          </LinearGradient>
         </View>
 
         {segments.length > 0 && <PlaneRoute segments={segments} />}
@@ -298,13 +312,21 @@ export default function HomeScreen() {
               onPress={() => setActiveIndex(i)}
             />
           ))}
-          <TouchableOpacity
-            style={s.chipAdd}
-            onPress={() => nav.push("/trips")}
+          <LinearGradient
+            colors={[colors.sage, colors.teal]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={s.chipAddGrad}
           >
-            <Ionicons name="add" size={13} color={colors.teal2} />
-            <Text style={s.chipAddText}>nova viagem</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={s.chipAdd}
+              onPress={() => nav.push("/trips")}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add" size={13} color={colors.white} />
+              <Text style={s.chipAddText}>nova viagem</Text>
+            </TouchableOpacity>
+          </LinearGradient>
         </ScrollView>
 
         {/* stats */}
@@ -403,13 +425,20 @@ export default function HomeScreen() {
                     returnKeyType="done"
                     onSubmitEditing={handleAddItem}
                   />
-                  <TouchableOpacity
-                    style={s.addBtn}
-                    onPress={handleAddItem}
-                    activeOpacity={0.8}
+                  <LinearGradient
+                    colors={[colors.blush, colors.accent]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={s.addBtnGrad}
                   >
-                    <Text style={s.addBtnText}>adicionar</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={s.addBtn}
+                      onPress={handleAddItem}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={s.addBtnText}>adicionar</Text>
+                    </TouchableOpacity>
+                  </LinearGradient>
                 </View>
               )}
               </View>
@@ -674,15 +703,22 @@ const s = StyleSheet.create({
     fontWeight: "600",
     marginTop: 3,
   },
-  editBtn: {
-    width: 32,
-    height: 32,
+  editBtnGrad: {
+    width: 40,
+    height: 40,
     borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
+    marginTop: 2,
+    overflow: 'hidden',
+    shadowColor: colors.blush,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  editBtn: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
   },
 
   /* countdown */
@@ -768,19 +804,24 @@ const s = StyleSheet.create({
     maxWidth: 110,
   },
   chipTextActive: { color: colors.white },
+  chipAddGrad: {
+    borderRadius: radius.full,
+    marginRight: spacing.sm,
+    overflow: 'hidden',
+    shadowColor: colors.sage,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
   chipAdd: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
     paddingHorizontal: spacing.md,
     paddingVertical: 7,
-    borderRadius: radius.full,
-    borderWidth: 1.5,
-    borderColor: colors.teal,
-    backgroundColor: colors.tealLight,
-    marginRight: spacing.sm,
   },
-  chipAddText: { fontSize: 11, fontWeight: "700", color: colors.teal2 },
+  chipAddText: { fontSize: 11, fontWeight: "700", color: colors.white },
 
   /* stats */
   statRow: { flexDirection: "row", gap: 8, marginBottom: spacing.md },
@@ -900,12 +941,20 @@ const s = StyleSheet.create({
     fontWeight: "600",
     color: colors.navy,
   },
-  addBtn: {
-    backgroundColor: colors.teal,
+  addBtnGrad: {
     borderRadius: radius.md,
+    overflow: 'hidden',
+    shadowColor: colors.blush,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  addBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: 9,
-    ...shadow.teal,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addBtnText: { fontSize: 12, fontWeight: "800", color: colors.white },
 
