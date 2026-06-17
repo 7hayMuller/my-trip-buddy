@@ -50,12 +50,12 @@ export function useAuth() {
         // Abre o URL no navegador
         const result = await WebBrowser.openAuthSessionAsync(
           data.url,
-          "myappscheme://"
+          "mytripbuddy://callback"
         );
 
         if (result.type === "success") {
           // Aguarda um pouco para a sessão ser criada
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 2000));
 
           // Busca o usuário logado
           const { data: { session }, error: sessionError } =
