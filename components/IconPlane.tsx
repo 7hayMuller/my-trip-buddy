@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, LinearGradient, Stop, Ellipse } from 'react-native-svg';
 
 interface IconPlaneProps {
   size?: number;
@@ -9,78 +9,77 @@ export function IconPlane({ size = 28 }: IconPlaneProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64" fill="none">
       <Defs>
-        <LinearGradient id="fuseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <LinearGradient id="planeBody" x1="0%" y1="0%" x2="0%" y2="100%">
           <Stop offset="0%" stopColor="#667EEA" />
-          <Stop offset="100%" stopColor="#764BA2" />
+          <Stop offset="100%" stopColor="#5A67D8" />
         </LinearGradient>
-        <LinearGradient id="wingGrad" x1="0%" y1="0%" x2="100%" y2="50%">
+        <LinearGradient id="planeWings" x1="0%" y1="50%" x2="100%" y2="50%">
           <Stop offset="0%" stopColor="#F093FB" />
           <Stop offset="100%" stopColor="#F5576C" />
         </LinearGradient>
-        <LinearGradient id="tailGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-          <Stop offset="0%" stopColor="#4FACFE" />
-          <Stop offset="100%" stopColor="#00F2FE" />
-        </LinearGradient>
       </Defs>
 
-      {/* Fuselagem principal */}
+      {/* Fuselagem (corpo do avião) */}
       <Path
-        d="M32 10C32 10 38 18 38 26L38 45C38 48 35.3 50 32 50C28.7 50 26 48 26 45L26 26C26 18 32 10 32 10Z"
-        fill="url(#fuseGrad)"
+        d="M32 12L40 28L40 42C40 45.3 36.3 48 32 48C27.7 48 24 45.3 24 42L24 28L32 12Z"
+        fill="url(#planeBody)"
       />
 
-      {/* Asa esquerda */}
+      {/* Ponta do nariz */}
+      <Circle cx="32" cy="11" r="2" fill="#4C51BF" />
+
+      {/* Cockpit window */}
+      <Circle cx="32" cy="18" r="2" fill="#FFD700" />
+
+      {/* Asa esquerda - grande */}
       <Path
-        d="M26 30C26 30 8 33 6 36C5 37 6 38 8 37C12 36 26 32 26 32Z"
-        fill="url(#wingGrad)"
+        d="M24 30C24 30 6 34 4 37C3 38 3 39 5 38.5C10 37 24 32 24 32Z"
+        fill="url(#planeWings)"
       />
 
-      {/* Asa direita */}
+      {/* Asa direita - grande */}
       <Path
-        d="M38 30C38 30 56 33 58 36C59 37 58 38 56 37C52 36 38 32 38 32Z"
-        fill="url(#wingGrad)"
+        d="M40 30C40 30 58 34 60 37C61 38 61 39 59 38.5C54 37 40 32 40 32Z"
+        fill="url(#planeWings)"
       />
 
-      {/* Leme vertical esquerdo */}
+      {/* Estabilizador horizontal esquerdo (pequeno) */}
       <Path
-        d="M28 46L24 54C24 55 25 56 26 55L28 48Z"
-        fill="url(#tailGrad)"
+        d="M26 42C26 42 14 44 12 45C11 45 11 46 13 45.5C17 44.5 26 43 26 43Z"
+        fill="#FF6B9D"
+        opacity="0.8"
       />
 
-      {/* Leme vertical direito */}
+      {/* Estabilizador horizontal direito (pequeno) */}
       <Path
-        d="M36 46L40 54C40 55 39 56 38 55L36 48Z"
-        fill="url(#tailGrad)"
+        d="M38 42C38 42 50 44 52 45C53 45 53 46 51 45.5C47 44.5 38 43 38 43Z"
+        fill="#FF6B9D"
+        opacity="0.8"
       />
 
-      {/* Cockpit window - grande */}
-      <Circle
-        cx="32"
-        cy="16"
-        r="2.5"
-        fill="#FFD700"
-      />
-
-      {/* Pequena sombra/detalhe da fuselagem */}
+      {/* Estabilizador vertical (cauda) */}
       <Path
-        d="M26 26L26 40"
-        stroke="rgba(0,0,0,0.1)"
-        strokeWidth="1"
+        d="M32 46L28 54C28 55 29 56 30 55L32 48Z"
+        fill="#4FACFE"
+      />
+      <Path
+        d="M32 46L36 54C36 55 35 56 34 55L32 48Z"
+        fill="#4FACFE"
       />
 
-      {/* Detalhes de porta da cabine */}
-      <Rect
-        x="30"
-        y="28"
-        width="4"
-        height="6"
-        rx="1"
-        fill="rgba(255,255,255,0.3)"
-      />
+      {/* Luz vermelha esquerda */}
+      <Circle cx="18" cy="32" r="1" fill="#FF4444" opacity="0.9" />
 
-      {/* Luzes de navegação */}
-      <Circle cx="22" cy="30" r="1" fill="#FF4444" opacity="0.8" />
-      <Circle cx="42" cy="30" r="1" fill="#44FF44" opacity="0.8" />
+      {/* Luz verde direita */}
+      <Circle cx="46" cy="32" r="1" fill="#44FF44" opacity="0.9" />
+
+      {/* Detalhe da porta de carga */}
+      <Path
+        d="M30 34H34"
+        stroke="#FFFFFF"
+        strokeWidth="0.8"
+        opacity="0.5"
+      />
     </Svg>
   );
 }
