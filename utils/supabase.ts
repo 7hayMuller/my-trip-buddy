@@ -34,13 +34,27 @@ export const isConfigured = !!supabase;
 
 /* ── device ID (chave única por instalação) ──────────────────────── */
 
+let deviceIdCache: string | null = null;
+
 export async function getDeviceId(): Promise<string> {
-  let id = await AsyncStorage.getItem(DEVICE_KEY);
-  if (!id) {
-    id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    await AsyncStorage.setItem(DEVICE_KEY, id);
+  // Return cached ID if available
+  if (deviceIdCache) return deviceIdCache;
+
+  try {
+    let id = await AsyncStorage.getItem(DEVICE_KEY);
+    if (!id) {
+      id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      await AsyncStorage.setItem(DEVICE_KEY, id).catch(() => {
+        // Silently fail if AsyncStorage not available
+      });
+    }
+    deviceIdCache = id;
+    return id;
+  } catch {
+    // Fallback: generate and cache a temporary ID
+    deviceIdCache = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    return deviceIdCache;
   }
-  return id;
 }
 
 /* ── sync ────────────────────────────────────────────────────────── */
