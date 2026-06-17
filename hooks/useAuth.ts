@@ -36,28 +36,28 @@ export function useAuth() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: "mytripbuddy://callback",
+          skipBrowserRedirect: true,
         },
       });
 
       if (error) throw error;
+      if (!data?.url) throw new Error("No auth URL returned");
 
-      if (data.url) {
-        // Open the auth URL in browser - Supabase handles the callback
-        await WebBrowser.openBrowserAsync(data.url);
+      // Open browser and wait for callback
+      const result = await WebBrowser.openAuthSessionAsync(
+        data.url,
+        "myappscheme://callback"
+      );
 
-        // Poll for session after a delay
-        const checkSession = async () => {
-          for (let i = 0; i < 10; i++) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session?.user) {
-              setUser(session.user);
-              return;
-            }
-          }
-        };
-        checkSession();
+      if (result.type === "success") {
+        // Give Supabase time to process the callback
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        // Get the session that should now be created
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser(session.user);
+        }
       }
     } catch (error) {
       console.error("Erro ao fazer login:", error);
