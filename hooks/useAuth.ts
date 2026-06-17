@@ -14,6 +14,7 @@ export function useAuth() {
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: GOOGLE_CLIENT_ID,
+    scopes: ["profile", "email"],
   });
 
   // Verificar se já está logado na inicialização
