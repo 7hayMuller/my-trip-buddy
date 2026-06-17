@@ -19,7 +19,7 @@ export default function LoginScreen() {
   const insets = useSafeAreaInsets();
   const { loginWithGoogle, loading, isSignedIn } = useAuth();
 
-  const scaleAnim = React.useRef(new Animated.Value(0.8)).start();
+  const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
 
   // Redirecionar para home se já está logado
   useEffect(() => {
@@ -29,16 +29,13 @@ export default function LoginScreen() {
   }, [isSignedIn]);
 
   // Animação de entrada
-  React.useEffect(() => {
-    Animated.spring(
-      new Animated.Value(0.8),
-      {
-        toValue: 1,
-        speed: 8,
-        bounciness: 8,
-        useNativeDriver: true,
-      }
-    ).start();
+  useEffect(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      speed: 8,
+      bounciness: 8,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   return (

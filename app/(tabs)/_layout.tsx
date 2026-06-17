@@ -1,24 +1,15 @@
-import { Tabs, useRouter } from "expo-router";
+import { Tabs } from "expo-router";
 import React from "react";
-import { StyleSheet, View, TouchableOpacity } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 
 import { HapticTab } from "@/components/haptic-tab";
 import { IconHome } from "@/components/IconHome";
 import { IconSuitcase } from "@/components/IconSuitcase";
-import { useAuth } from "@/hooks/useAuth";
 import { colors } from "@/theme";
 
 export default function TabLayout() {
-  const { logout } = useAuth();
-  const nav = useRouter();
-
-  const handleLogout = async () => {
-    await logout();
-    nav.replace('/login');
-  };
-
   return (
     <Tabs
       screenOptions={{
@@ -128,12 +119,6 @@ export default function TabLayout() {
               />
             </View>
           ),
-          listeners: {
-            tabPress: (e) => {
-              e.preventDefault();
-              handleLogout();
-            },
-          },
         }}
       />
     </Tabs>
