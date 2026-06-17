@@ -3,9 +3,10 @@ import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-nativ
 
 interface IconHomeProps {
   size?: number;
+  color?: string;
 }
 
-export function IconHome({ size = 28 }: IconHomeProps) {
+export function IconHome({ size = 28, color }: IconHomeProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64" fill="none">
       <Defs>
