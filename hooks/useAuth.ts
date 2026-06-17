@@ -7,7 +7,7 @@ import { supabase } from "../utils/supabase";
 WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_CLIENT_ID =
-  "854857410639-a9i5quj1pbv1hm6k3obr1c5eo7k5n5j8.apps.googleusercontent.com"; // Substitua com seu Client ID
+  "738475165712-n61jam6po5smpt2qpv3u9a6onh6rgu9r.apps.googleusercontent.com";
 
 export function useAuth() {
   const [user, setUser] = useState<any>(null);
@@ -15,8 +15,7 @@ export function useAuth() {
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: GOOGLE_CLIENT_ID,
-    redirectUri:
-      "738475165712-n61jam6po5smpt2qpv3u9a6onh6rgu9r.apps.googleusercontent.com", // Substitua com sua URL
+    redirectUri: "https://tavfguxqxxmnsrpthmjv.supabase.co/auth/v1/callback", // Supabase callback URL
   });
 
   // Verificar se já está logado na inicialização
