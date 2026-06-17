@@ -1,86 +1,86 @@
 import React from 'react';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Path, Circle, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 interface IconPlaneProps {
-  color?: string;
   size?: number;
 }
 
-export function IconPlane({ color = '#E8A8C8', size = 28 }: IconPlaneProps) {
+export function IconPlane({ size = 28 }: IconPlaneProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 64 64" fill="none">
-      {/* Sombra base */}
-      <Path
-        d="M20 54C20 54 20 56 22 56H42C44 56 44 54 44 54Z"
-        fill={`${color}08`}
-      />
+      <Defs>
+        <LinearGradient id="fuseGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <Stop offset="0%" stopColor="#667EEA" />
+          <Stop offset="100%" stopColor="#764BA2" />
+        </LinearGradient>
+        <LinearGradient id="wingGrad" x1="0%" y1="0%" x2="100%" y2="50%">
+          <Stop offset="0%" stopColor="#F093FB" />
+          <Stop offset="100%" stopColor="#F5576C" />
+        </LinearGradient>
+        <LinearGradient id="tailGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+          <Stop offset="0%" stopColor="#4FACFE" />
+          <Stop offset="100%" stopColor="#00F2FE" />
+        </LinearGradient>
+      </Defs>
 
       {/* Fuselagem principal */}
       <Path
-        d="M32 8L48 26V44C48 47.3 45.3 50 42 50H22C18.7 50 16 47.3 16 44V26L32 8Z"
-        stroke={color}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill={`${color}12`}
+        d="M32 10C32 10 38 18 38 26L38 45C38 48 35.3 50 32 50C28.7 50 26 48 26 45L26 26C26 18 32 10 32 10Z"
+        fill="url(#fuseGrad)"
       />
 
-      {/* Asa esquerda - com mais detalhes */}
+      {/* Asa esquerda */}
       <Path
-        d="M32 28L10 34L32 38V28Z"
-        stroke={color}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill={`${color}08`}
+        d="M26 30C26 30 8 33 6 36C5 37 6 38 8 37C12 36 26 32 26 32Z"
+        fill="url(#wingGrad)"
       />
 
-      {/* Asa direita - com mais detalhes */}
+      {/* Asa direita */}
       <Path
-        d="M32 28L54 34L32 38V28Z"
-        stroke={color}
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill={`${color}08`}
+        d="M38 30C38 30 56 33 58 36C59 37 58 38 56 37C52 36 38 32 38 32Z"
+        fill="url(#wingGrad)"
       />
 
-      {/* Leme vertical */}
+      {/* Leme vertical esquerdo */}
       <Path
-        d="M26 46V54M38 46V54"
-        stroke={color}
-        strokeWidth="1.8"
-        strokeLinecap="round"
+        d="M28 46L24 54C24 55 25 56 26 55L28 48Z"
+        fill="url(#tailGrad)"
       />
 
-      {/* Janela do cockpit - maior */}
+      {/* Leme vertical direito */}
+      <Path
+        d="M36 46L40 54C40 55 39 56 38 55L36 48Z"
+        fill="url(#tailGrad)"
+      />
+
+      {/* Cockpit window - grande */}
       <Circle
         cx="32"
-        cy="18"
-        r="2.2"
-        fill={color}
-        opacity="0.8"
+        cy="16"
+        r="2.5"
+        fill="#FFD700"
       />
 
-      {/* Pequenas janelas da cabine */}
-      <Circle cx="28" cy="28" r="1" fill={color} opacity="0.5" />
-      <Circle cx="36" cy="28" r="1" fill={color} opacity="0.5" />
+      {/* Pequena sombra/detalhe da fuselagem */}
+      <Path
+        d="M26 26L26 40"
+        stroke="rgba(0,0,0,0.1)"
+        strokeWidth="1"
+      />
 
-      {/* Detalhe de movimento - linhas de velocidade */}
-      <Path
-        d="M8 33L12 33M8 35L12 35"
-        stroke={color}
-        strokeWidth="1"
-        strokeLinecap="round"
-        opacity="0.4"
+      {/* Detalhes de porta da cabine */}
+      <Rect
+        x="30"
+        y="28"
+        width="4"
+        height="6"
+        rx="1"
+        fill="rgba(255,255,255,0.3)"
       />
-      <Path
-        d="M52 33L56 33M52 35L56 35"
-        stroke={color}
-        strokeWidth="1"
-        strokeLinecap="round"
-        opacity="0.4"
-      />
+
+      {/* Luzes de navegação */}
+      <Circle cx="22" cy="30" r="1" fill="#FF4444" opacity="0.8" />
+      <Circle cx="42" cy="30" r="1" fill="#44FF44" opacity="0.8" />
     </Svg>
   );
 }
