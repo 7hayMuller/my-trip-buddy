@@ -58,6 +58,21 @@ function StepDots({ current }: { current: number }) {
   );
 }
 
+// Animated progress indicator
+const ProgressBar = ({ step, total }: { step: number; total: number }) => {
+  const progress = (step / total) * 100;
+  return (
+    <View style={s.progressContainer}>
+      <LinearGradient
+        colors={[colors.sage, colors.teal]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={[s.progressBar, { width: `${progress}%` }]}
+      />
+    </View>
+  );
+}
+
 function Label({ text, hint }: { text: string; hint?: string }) {
   return (
     <>
@@ -111,18 +126,25 @@ function NavButtons({
     <View style={s.navRow}>
       {step > 1 && (
         <TouchableOpacity style={s.navBack} onPress={onBack} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={15} color={colors.muted} />
+          <Ionicons name="arrow-back" size={16} color={colors.navy} />
           <Text style={s.navBackText}>voltar</Text>
         </TouchableOpacity>
       )}
-      <TouchableOpacity
-        style={[s.navNext, step === total && s.navSave]}
-        onPress={onNext}
-        activeOpacity={0.85}
+      <LinearGradient
+        colors={step === total ? [colors.blush, colors.accent] : [colors.sage, colors.teal]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[s.navNextGrad]}
       >
-        <Text style={s.navNextText}>{nextLabel}</Text>
-        <Ionicons name={nextIcon} size={15} color={colors.white} />
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={s.navNext}
+          onPress={onNext}
+          activeOpacity={0.85}
+        >
+          <Text style={s.navNextText}>{nextLabel}</Text>
+          <Ionicons name={nextIcon} size={16} color={colors.white} />
+        </TouchableOpacity>
+      </LinearGradient>
     </View>
   );
 }
@@ -293,15 +315,20 @@ export default function AddTripScreen() {
   // ─── render ────────────────────────────────────────────────────────────────
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.navy }}>
+    <View style={{ flex: 1, backgroundColor: colors.offwhite }}>
       {/* ── HEADER fixo (fora do KAV) ── */}
-      <View style={[s.header, { paddingTop: insets.top + 8 }]}>
+      <LinearGradient
+        colors={[colors.purple, colors.blush]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[s.headerGrad, { paddingTop: insets.top + 8 }]}
+      >
         <View style={s.headerRow}>
           <TouchableOpacity
             style={s.backBtn}
             onPress={() => (step > 1 ? back() : nav.back())}
           >
-            <Ionicons name="arrow-back" size={16} color="rgba(255,255,255,0.75)" />
+            <Ionicons name="arrow-back" size={16} color={colors.white} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={s.headerTitle}>{STEPS[step - 1].title}</Text>
@@ -309,12 +336,12 @@ export default function AddTripScreen() {
           </View>
           {isEdit && step === 1 && (
             <TouchableOpacity onPress={handleDelete}>
-              <Ionicons name="trash-outline" size={18} color={colors.accent} />
+              <Ionicons name="trash-outline" size={18} color={colors.white} />
             </TouchableOpacity>
           )}
         </View>
-        <StepDots current={step} />
-      </View>
+        <ProgressBar step={step} total={3} />
+      </LinearGradient>
 
       <CloudTop />
 
@@ -717,8 +744,7 @@ export default function AddTripScreen() {
 // ─── styles ───────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  header: {
-    backgroundColor: colors.navy,
+  headerGrad: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
   },
@@ -729,21 +755,33 @@ const s = StyleSheet.create({
     marginBottom: spacing.md,
   },
   backBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
+    backdropFilter: "blur(10px)",
   },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: colors.white, fontStyle: "italic" },
-  headerSub:   { fontSize: 11, color: colors.muted, fontWeight: "600", marginTop: 1 },
+  headerTitle: { fontSize: 24, fontWeight: "900", color: colors.white, fontStyle: "italic" },
+  headerSub:   { fontSize: 12, color: "rgba(255,255,255,0.8)", fontWeight: "600", marginTop: 2 },
 
   dotsRow: { flexDirection: "row", gap: 5 },
   dot: { flex: 1, height: 3, borderRadius: 3, backgroundColor: "rgba(255,255,255,0.15)" },
-  dotDone:   { backgroundColor: colors.teal },
-  dotActive: { backgroundColor: "rgba(59,191,178,0.6)" },
+  dotDone:   { backgroundColor: colors.sage },
+  dotActive: { backgroundColor: "rgba(255,255,255,0.6)" },
+
+  progressContainer: {
+    height: 4,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: spacing.sm,
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 2,
+  },
 
   sheet: { flex: 1, backgroundColor: colors.offwhite },
   sheetContent: { paddingHorizontal: spacing.lg, paddingTop: 4, paddingBottom: 20 },
@@ -872,28 +910,40 @@ const s = StyleSheet.create({
   navBack: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
+    gap: 6,
     paddingHorizontal: spacing.lg,
     paddingVertical: 13,
     borderRadius: radius.lg,
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.white,
+    shadowColor: colors.navy,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  navBackText:  { fontSize: 13, fontWeight: "700", color: colors.muted },
+  navBackText:  { fontSize: 13, fontWeight: "800", color: colors.navy },
+  navNextGrad: {
+    flex: 1,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+    shadowColor: colors.blush,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
   navNext: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    backgroundColor: colors.navy,
-    borderRadius: radius.lg,
+    gap: 8,
     paddingVertical: 13,
-    ...shadow.md,
+    paddingHorizontal: spacing.lg,
   },
-  navSave:     { backgroundColor: colors.teal, ...shadow.teal },
-  navNextText: { fontSize: 13, fontWeight: "800", color: colors.white },
+  navNextText: { fontSize: 14, fontWeight: "900", color: colors.white },
 
   reviewHero: {
     backgroundColor: colors.navy,

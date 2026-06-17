@@ -1,10 +1,10 @@
 import { Tabs } from "expo-router";
 import React from "react";
-import { StyleSheet } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
 
 import { HapticTab } from "@/components/haptic-tab";
-import { IconSymbol } from "@/components/ui/icon-symbol";
 import { colors } from "@/theme";
 
 export default function TabLayout() {
@@ -16,25 +16,40 @@ export default function TabLayout() {
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarBackground: () => (
-          <LinearGradient
-            colors={[colors.navy, colors.navy2]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFillObject}
-          />
+          <View style={{ flex: 1 }}>
+            <LinearGradient
+              colors={[colors.navy, colors.navy2]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={StyleSheet.absoluteFillObject}
+            />
+            {/* Top border accent */}
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 2,
+                background: `linear-gradient(90deg, ${colors.blush}, ${colors.sage}, ${colors.teal})`,
+              }}
+            />
+          </View>
         ),
         tabBarStyle: {
           borderTopWidth: 0,
           backgroundColor: 'transparent',
-          elevation: 12,
-          height: 68,
-          paddingBottom: 8,
-          paddingTop: 8,
+          elevation: 20,
+          height: 80,
+          paddingBottom: 12,
+          paddingTop: 12,
+          borderRadius: 0,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
-          fontWeight: '700',
-          marginTop: 4,
+          fontSize: 12,
+          fontWeight: '800',
+          marginTop: 6,
+          letterSpacing: 0.5,
         },
       }}
     >
@@ -43,11 +58,23 @@ export default function TabLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
-            <IconSymbol
-              size={focused ? 32 : 28}
-              name="house.fill"
-              color={color}
-            />
+            <View
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 16,
+                backgroundColor: focused ? `${color}20` : 'transparent',
+                justifyContent: 'center',
+                alignItems: 'center',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              <Ionicons
+                name={focused ? "home" : "home-outline"}
+                size={focused ? 28 : 24}
+                color={color}
+              />
+            </View>
           ),
         }}
       />
@@ -56,11 +83,23 @@ export default function TabLayout() {
         options={{
           title: "Viagens",
           tabBarIcon: ({ color, focused }) => (
-            <IconSymbol
-              size={focused ? 32 : 28}
-              name="paperplane.fill"
-              color={color}
-            />
+            <View
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 16,
+                backgroundColor: focused ? `${color}20` : 'transparent',
+                justifyContent: 'center',
+                alignItems: 'center',
+                transition: 'all 0.3s ease',
+              }}
+            >
+              <Ionicons
+                name={focused ? "airplane" : "airplane-outline"}
+                size={focused ? 28 : 24}
+                color={color}
+              />
+            </View>
           ),
         }}
       />
