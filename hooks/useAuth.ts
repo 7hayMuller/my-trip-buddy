@@ -15,7 +15,6 @@ export function useAuth() {
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: GOOGLE_CLIENT_ID,
-    redirectUri: "myappscheme://",
   });
 
   // Verificar se já está logado na inicialização
@@ -35,13 +34,16 @@ export function useAuth() {
 
   async function checkUser() {
     try {
+      // Wait a moment for AsyncStorage to be ready
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const token = await AsyncStorage.getItem("@user_token");
       if (token && supabase) {
         const { data: { user }, error } = await supabase.auth.getUser(token);
         if (user && !error) {
           setUser(user);
         } else {
-          await AsyncStorage.removeItem("@user_token");
+          await AsyncStorage.removeItem("@user_token").catch(() => {});
         }
       }
     } catch (error) {
@@ -93,15 +95,23 @@ export function useAuth() {
 
         if (signUpError) throw signUpError;
         if (signUpData.session) {
-          await AsyncStorage.setItem(
-            "@user_token",
-            signUpData.session.access_token
-          );
+          try {
+            await AsyncStorage.setItem(
+              "@user_token",
+              signUpData.session.access_token
+            );
+          } catch (e) {
+            console.warn("Failed to save token to AsyncStorage:", e);
+          }
           setUser(signUpData.user);
         }
       } else {
         if (data.session?.access_token) {
-          await AsyncStorage.setItem("@user_token", data.session.access_token);
+          try {
+            await AsyncStorage.setItem("@user_token", data.session.access_token);
+          } catch (e) {
+            console.warn("Failed to save token to AsyncStorage:", e);
+          }
           setUser(data.user);
         }
       }
