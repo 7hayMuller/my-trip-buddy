@@ -4,8 +4,9 @@ import { differenceInDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
+  Animated,
   ImageBackground,
   ScrollView,
   StyleSheet,
@@ -137,6 +138,18 @@ export default function HomeScreen() {
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItemText, setNewItemText] = useState("");
 
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const heroScale = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [1, 0.95],
+    extrapolate: 'clamp',
+  });
+  const heroOpacity = scrollY.interpolate({
+    inputRange: [0, 80],
+    outputRange: [1, 0.85],
+    extrapolate: 'clamp',
+  });
+
   const doneChecks = activeChecks.filter((c: CheckItem) => c.done).length;
   const nights = activeTrip
     ? Math.max(
@@ -260,10 +273,15 @@ export default function HomeScreen() {
       <CloudDivider color={colors.offwhite} width={width} />
 
       {/* ── WHITE SHEET ── */}
-      <ScrollView
+      <Animated.ScrollView
         style={s.sheet}
         contentContainerStyle={s.sheetContent}
         showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: false },
+        )}
+        scrollEventThrottle={16}
       >
         {/* trip chips */}
         <Text style={s.secLabel}>suas viagens</Text>
@@ -291,15 +309,36 @@ export default function HomeScreen() {
 
         {/* stats */}
         <View style={s.statRow}>
-          <StatCard
-            value={String(activeTrip?.destinations?.length ?? 0)}
-            label="destinos"
-          />
-          <StatCard value={String(nights)} label="noites" />
-          <StatCard
-            value={activeChecks.length > 0 ? `${doneChecks}/${activeChecks.length}` : "–"}
-            label="checklist"
-          />
+          <LinearGradient
+            colors={['rgba(107,169,160,0.08)', 'rgba(107,169,160,0.03)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.statCardGrad}
+          >
+            <StatCard
+              value={String(activeTrip?.destinations?.length ?? 0)}
+              label="destinos"
+            />
+          </LinearGradient>
+          <LinearGradient
+            colors={['rgba(123,104,182,0.08)', 'rgba(123,104,182,0.03)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.statCardGrad}
+          >
+            <StatCard value={String(nights)} label="noites" />
+          </LinearGradient>
+          <LinearGradient
+            colors={['rgba(216,168,196,0.08)', 'rgba(216,168,196,0.03)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.statCardGrad}
+          >
+            <StatCard
+              value={activeChecks.length > 0 ? `${doneChecks}/${activeChecks.length}` : "–"}
+              label="checklist"
+            />
+          </LinearGradient>
         </View>
 
         {/* visa warning */}
@@ -333,10 +372,16 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={s.card}>
-              {activeChecks.length === 0 && (
-                <Text style={s.emptyCheck}>Nenhum item no checklist ainda.</Text>
-              )}
+            <LinearGradient
+              colors={['rgba(255,255,255,0.95)', 'rgba(245,243,240,0.98)']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0.5, y: 1 }}
+              style={s.cardGrad}
+            >
+              <View style={s.card}>
+                {activeChecks.length === 0 && (
+                  <Text style={s.emptyCheck}>Nenhum item no checklist ainda.</Text>
+                )}
               {activeChecks.map((item: CheckItem, i: number) => (
                 <CheckRow
                   key={item.id}
@@ -367,7 +412,8 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 </View>
               )}
-            </View>
+              </View>
+            </LinearGradient>
           </>
         )}
 
@@ -494,19 +540,26 @@ export default function HomeScreen() {
 
         {/* next flight highlight */}
         {activeTrip && (
-          <View style={s.tealCard}>
-            <Text style={s.tealIcon}>✈️</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={s.tealLabel}>próximo voo</Text>
-              <Text style={s.tealValue}>
-                {segments[0]?.from} → {segments[segments.length - 1]?.to}
-                {activeTrip.flightConf ? `  ·  ${activeTrip.flightConf}` : ""}
-              </Text>
-              <Text style={s.tealSub}>
-                {formatDate(activeTrip.depart)} · {nights * 24}h+ de aventura
-              </Text>
+          <LinearGradient
+            colors={[colors.teal, colors.sage]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={s.tealCardGrad}
+          >
+            <View style={s.tealCard}>
+              <Text style={s.tealIcon}>✈️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.tealLabel}>próximo voo</Text>
+                <Text style={s.tealValue}>
+                  {segments[0]?.from} → {segments[segments.length - 1]?.to}
+                  {activeTrip.flightConf ? `  ·  ${activeTrip.flightConf}` : ""}
+                </Text>
+                <Text style={s.tealSub}>
+                  {formatDate(activeTrip.depart)} · {nights * 24}h+ de aventura
+                </Text>
+              </View>
             </View>
-          </View>
+          </LinearGradient>
         )}
 
         {/* confirmations */}
@@ -515,43 +568,57 @@ export default function HomeScreen() {
             <Text style={s.secLabel}>confirmações</Text>
             <View style={s.confRow}>
               {activeTrip.flightConf && (
-                <View style={s.confCard}>
-                  <View style={s.confLabelRow}>
-                    <Ionicons
-                      name="airplane-outline"
-                      size={12}
-                      color={colors.muted}
-                    />
-                    <Text style={s.confLabel}>voo</Text>
+                <LinearGradient
+                  colors={['rgba(123,104,182,0.08)', 'rgba(123,104,182,0.02)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.confCardGrad}
+                >
+                  <View style={s.confCard}>
+                    <View style={s.confLabelRow}>
+                      <Ionicons
+                        name="airplane-outline"
+                        size={12}
+                        color={colors.muted}
+                      />
+                      <Text style={s.confLabel}>voo</Text>
+                    </View>
+                    <Text style={[s.confValue, { color: colors.purple }]}>
+                      {activeTrip.flightConf}
+                    </Text>
+                    <Text style={s.confSub}>confirmado</Text>
                   </View>
-                  <Text style={[s.confValue, { color: colors.purple }]}>
-                    {activeTrip.flightConf}
-                  </Text>
-                  <Text style={s.confSub}>confirmado</Text>
-                </View>
+                </LinearGradient>
               )}
               {activeTrip.hotelConf && (
-                <View style={s.confCard}>
-                  <View style={s.confLabelRow}>
-                    <Ionicons
-                      name="bed-outline"
-                      size={12}
-                      color={colors.muted}
-                    />
-                    <Text style={s.confLabel}>hotel</Text>
+                <LinearGradient
+                  colors={['rgba(107,169,160,0.08)', 'rgba(107,169,160,0.02)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.confCardGrad}
+                >
+                  <View style={s.confCard}>
+                    <View style={s.confLabelRow}>
+                      <Ionicons
+                        name="bed-outline"
+                        size={12}
+                        color={colors.muted}
+                      />
+                      <Text style={s.confLabel}>hotel</Text>
+                    </View>
+                    <Text style={[s.confValue, { color: colors.teal2 }]}>
+                      {activeTrip.hotelConf}
+                    </Text>
+                    <Text style={s.confSub}>{activeTrip.destinations?.[0]}</Text>
                   </View>
-                  <Text style={[s.confValue, { color: colors.teal2 }]}>
-                    {activeTrip.hotelConf}
-                  </Text>
-                  <Text style={s.confSub}>{activeTrip.destinations?.[0]}</Text>
-                </View>
+                </LinearGradient>
               )}
             </View>
           </>
         )}
 
         <View style={{ height: 100 }} />
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -717,15 +784,21 @@ const s = StyleSheet.create({
 
   /* stats */
   statRow: { flexDirection: "row", gap: 8, marginBottom: spacing.md },
+  statCardGrad: {
+    flex: 1,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 0,
+    overflow: 'hidden',
+    ...shadow.sm,
+  },
   statCard: {
     flex: 1,
     backgroundColor: colors.white,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
     padding: 10,
     alignItems: "center",
-    ...shadow.sm,
   },
   statNum: { fontSize: 18, fontWeight: "900", color: colors.navy },
   statLabel: {
@@ -756,15 +829,17 @@ const s = StyleSheet.create({
   visaMsg:   { fontSize: 11, fontWeight: "600", color: colors.warning, marginBottom: 2 },
 
   /* card */
-  card: {
-    backgroundColor: colors.white,
+  cardGrad: {
     borderRadius: radius.xl,
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+    ...shadow.sm,
+  },
+  card: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    marginBottom: spacing.md,
-    ...shadow.sm,
   },
   emptyCheck: {
     fontSize: 12,
@@ -854,15 +929,17 @@ const s = StyleSheet.create({
   placeName: { fontSize: 12, fontWeight: "800", color: colors.white },
 
   /* teal highlight */
+  tealCardGrad: {
+    borderRadius: radius.xl,
+    marginBottom: spacing.md,
+    overflow: 'hidden',
+    ...shadow.teal,
+  },
   tealCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    backgroundColor: colors.teal,
-    borderRadius: radius.xl,
     padding: spacing.md,
-    marginBottom: spacing.md,
-    ...shadow.teal,
   },
   tealIcon: { fontSize: 26 },
   tealLabel: {
@@ -926,14 +1003,17 @@ const s = StyleSheet.create({
 
   /* confirmations */
   confRow: { flexDirection: "row", gap: 8, marginBottom: spacing.md },
-  confCard: {
+  confCardGrad: {
     flex: 1,
-    backgroundColor: colors.white,
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: spacing.md,
+    overflow: 'hidden',
     ...shadow.sm,
+  },
+  confCard: {
+    padding: spacing.md,
+    backgroundColor: colors.white,
   },
   confLabelRow: {
     flexDirection: "row",

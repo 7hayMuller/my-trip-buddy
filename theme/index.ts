@@ -1,42 +1,63 @@
 export const colors = {
-  navy:        '#1B2B4B',
-  navy2:       '#243460',
-  navyDeep:    '#111E35',
-  teal:        '#3BBFB2',
-  teal2:       '#2DA89C',
-  tealLight:   '#E6F9F7',
+  // 2025 trend palette - modern & sophisticated
+  navy:        '#2D3E52',
+  navy2:       '#3A4B63',
+  navyDeep:    '#1F2D3D',
+
+  // Modern accent colors
+  teal:        '#6BA9A0',
+  teal2:       '#5B9B91',
+  tealLight:   '#E8F4F2',
+
   white:       '#FFFFFF',
-  offwhite:    '#F4F7FB',
-  muted:       '#8FA3C0',
-  border:      '#DDE8F5',
-  ink:         '#1B2B4B',
+  cream:       '#F9F7F4',
+  offwhite:    '#F5F3F0',
+  muted:       '#9BA5B0',
+  border:      '#E5E0DB',
+  ink:         '#2D3E52',
 
-  accent:      '#D4537E',
-  accentLight: '#FBEAF0',
-  gold:        '#B07D2E',
-  goldLight:   '#FBF3E2',
-  purple:      '#534AB7',
-  purpleLight: '#EEEDFE',
-  green:       '#0F6E56',
-  greenLight:  '#E1F5EE',
+  // Trend colors: blush, sage, warm tones
+  accent:      '#D8A8C4',
+  accentLight: '#F7EAF3',
 
-  heroOverlay: 'rgba(17,30,53,0.55)',
-  heroGrad1:   'rgba(17,30,53,0.0)',
-  heroGrad2:   'rgba(17,30,53,0.65)',
-  heroGrad3:   'rgba(27,43,75,0.95)',
+  gold:        '#C9A86F',
+  goldLight:   '#F8F4ED',
 
-  // white overlays for hero
-  routeLine:   'rgba(255,255,255,0.2)',
-  routeDot:    '#3BBFB2',
-  cdBg:        'rgba(255,255,255,0.1)',
-  cdBorder:    'rgba(255,255,255,0.15)',
+  sage:        '#9CAF88',
+  sageLight:   '#EEF2EA',
+
+  purple:      '#7B68B6',
+  purpleLight: '#F0E9FE',
+
+  green:       '#7EA989',
+  greenLight:  '#E8F2ED',
+
+  blush:       '#E8A8C8',
+  blushLight:  '#F8E8F2',
+
+  // Hero gradients - updated for modern look
+  heroOverlay: 'rgba(45,62,82,0.5)',
+  heroGrad1:   'rgba(45,62,82,0.0)',
+  heroGrad2:   'rgba(45,62,82,0.65)',
+  heroGrad3:   'rgba(31,45,61,0.95)',
+
+  // Glassmorphism effects
+  routeLine:   'rgba(255,255,255,0.25)',
+  routeDot:    '#6BA9A0',
+  cdBg:        'rgba(255,255,255,0.08)',
+  cdBorder:    'rgba(255,255,255,0.12)',
   cdNum:       '#FFFFFF',
-  cdLabel:     'rgba(255,255,255,0.5)',
-  cdSep:       'rgba(255,255,255,0.2)',
+  cdLabel:     'rgba(255,255,255,0.55)',
+  cdSep:       'rgba(255,255,255,0.25)',
 
-  warning:      '#B45309',
-  warningLight: '#FEF3C7',
-  warningBorder:'#FDE68A',
+  warning:      '#D97706',
+  warningLight: '#FEF5E7',
+  warningBorder:'#F9E5B8',
+
+  // Gradient colors for visual interest
+  gradStart:   '#7B68B6',
+  gradMid:     '#D8A8C4',
+  gradEnd:     '#F8A8B8',
 } as const;
 
 export const fonts = {
