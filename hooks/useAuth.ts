@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState } from "react";
@@ -34,16 +33,10 @@ export function useAuth() {
 
   async function checkUser() {
     try {
-      // Wait a moment for AsyncStorage to be ready
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const token = await AsyncStorage.getItem("@user_token");
-      if (token && supabase) {
-        const { data: { user }, error } = await supabase.auth.getUser(token);
-        if (user && !error) {
-          setUser(user);
-        } else {
-          await AsyncStorage.removeItem("@user_token").catch(() => {});
+      if (supabase) {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (session?.user && !error) {
+          setUser(session.user);
         }
       }
     } catch (error) {
@@ -94,24 +87,11 @@ export function useAuth() {
           });
 
         if (signUpError) throw signUpError;
-        if (signUpData.session) {
-          try {
-            await AsyncStorage.setItem(
-              "@user_token",
-              signUpData.session.access_token
-            );
-          } catch (e) {
-            console.warn("Failed to save token to AsyncStorage:", e);
-          }
+        if (signUpData.user) {
           setUser(signUpData.user);
         }
       } else {
-        if (data.session?.access_token) {
-          try {
-            await AsyncStorage.setItem("@user_token", data.session.access_token);
-          } catch (e) {
-            console.warn("Failed to save token to AsyncStorage:", e);
-          }
+        if (data.user) {
           setUser(data.user);
         }
       }
@@ -127,7 +107,6 @@ export function useAuth() {
       if (supabase) {
         await supabase.auth.signOut();
       }
-      await AsyncStorage.removeItem("@user_token");
       setUser(null);
     } catch (error) {
       console.error("Erro ao fazer logout:", error);
