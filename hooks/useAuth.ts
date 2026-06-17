@@ -1,18 +1,37 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState } from "react";
 import { supabase } from "../utils/supabase";
 
 WebBrowser.maybeCompleteAuthSession();
 
+const GOOGLE_CLIENT_ID =
+  "738475165712-n61jam6po5smpt2qpv3u9a6onh6rgu9r.apps.googleusercontent.com";
+
 export function useAuth() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    clientId: GOOGLE_CLIENT_ID,
+    redirectUri: "myappscheme://",
+  });
 
   // Verificar se já está logado na inicialização
   useEffect(() => {
     checkUser();
   }, []);
+
+  // Handle login response
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { authentication } = response;
+      if (authentication?.accessToken) {
+        loginWithGoogle(authentication.accessToken);
+      }
+    }
+  }, [response]);
 
   async function checkUser() {
     try {
@@ -32,44 +51,58 @@ export function useAuth() {
     }
   }
 
-  async function loginWithGoogle() {
+  async function loginWithGoogle(googleAccessToken: string) {
     if (!supabase) return;
 
     try {
       setLoading(true);
-      const { data, error } = await supabase.auth.signInWithOAuth({
+
+      // Busca o ID token do Google usando o access token
+      const googleUserResponse = await fetch(
+        "https://www.googleapis.com/oauth2/v1/userinfo",
+        {
+          headers: { Authorization: `Bearer ${googleAccessToken}` },
+        }
+      );
+
+      if (!googleUserResponse.ok) {
+        throw new Error("Failed to get Google user info");
+      }
+
+      const googleUser = await googleUserResponse.json();
+
+      // Sign in com Supabase usando o Google user info
+      const { data, error } = await supabase.auth.signInWithIdToken({
         provider: "google",
-        options: {
-          skipBrowserRedirect: true,
-        },
+        token: googleAccessToken,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Tenta fazer sign up se o usuário não existe
+        const { data: signUpData, error: signUpError } =
+          await supabase.auth.signUp({
+            email: googleUser.email,
+            password: Math.random().toString(36).slice(-12),
+            options: {
+              data: {
+                name: googleUser.name,
+                picture: googleUser.picture,
+              },
+            },
+          });
 
-      if (data.url) {
-        // Abre o URL no navegador
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url,
-          "mytripbuddy://callback"
-        );
-
-        if (result.type === "success") {
-          // Aguarda um pouco para a sessão ser criada
-          await new Promise((resolve) => setTimeout(resolve, 2000));
-
-          // Busca o usuário logado
-          const { data: { session }, error: sessionError } =
-            await supabase.auth.getSession();
-
-          if (sessionError) throw sessionError;
-
-          if (session) {
-            await AsyncStorage.setItem(
-              "@user_token",
-              session.access_token
-            );
-            setUser(session.user);
-          }
+        if (signUpError) throw signUpError;
+        if (signUpData.session) {
+          await AsyncStorage.setItem(
+            "@user_token",
+            signUpData.session.access_token
+          );
+          setUser(signUpData.user);
+        }
+      } else {
+        if (data.session?.access_token) {
+          await AsyncStorage.setItem("@user_token", data.session.access_token);
+          setUser(data.user);
         }
       }
     } catch (error) {
@@ -94,7 +127,7 @@ export function useAuth() {
   return {
     user,
     loading,
-    loginWithGoogle,
+    loginWithGoogle: () => promptAsync(),
     logout,
     isSignedIn: !!user,
   };
