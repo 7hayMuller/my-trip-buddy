@@ -1,10 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import { differenceInDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState, useRef } from "react";
+import { useRouter } from "expo-router";
+import React, { useRef, useState } from "react";
 import {
   Animated,
   ImageBackground,
@@ -13,13 +13,11 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import CloudDivider from "../../components/CloudDivider";
-import PlaneRoute from "../../components/PlaneRoute";
 import { EmptyStateTrips } from "../../components/EmptyStateTrips";
+import PlaneRoute from "../../components/PlaneRoute";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useTrips } from "../../hooks/useTrips";
 import { colors, getTripImage, radius, shadow, spacing } from "../../theme";
@@ -29,11 +27,11 @@ import { getVisaWarnings } from "../../utils/visa";
 /* ─── category pill colors ───────────────────────────────────── */
 
 const CAT_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  doc:  { bg: colors.greenLight,   text: colors.green,   label: "docs"  },
-  fly:  { bg: colors.purpleLight,  text: colors.purple,  label: "voo"   },
-  stay: { bg: colors.goldLight,    text: colors.gold,    label: "hotel" },
-  look: { bg: colors.accentLight,  text: colors.accent,  label: "looks" },
-  misc: { bg: colors.offwhite,     text: colors.muted,   label: "outro" },
+  doc: { bg: colors.greenLight, text: colors.green, label: "docs" },
+  fly: { bg: colors.purpleLight, text: colors.purple, label: "voo" },
+  stay: { bg: colors.goldLight, text: colors.gold, label: "hotel" },
+  look: { bg: colors.accentLight, text: colors.accent, label: "looks" },
+  misc: { bg: colors.offwhite, text: colors.muted, label: "outro" },
   visa: { bg: colors.warningLight, text: colors.warning, label: "visto" },
 };
 
@@ -96,12 +94,21 @@ function CheckRow({
   const cs = CAT_STYLE[item.cat] ?? CAT_STYLE.misc;
   return (
     <View style={s.checkRow}>
-      <TouchableOpacity onPress={onToggle} hitSlop={8} style={s.checkCircleWrap}>
+      <TouchableOpacity
+        onPress={onToggle}
+        hitSlop={8}
+        style={s.checkCircleWrap}
+      >
         <View style={[s.checkCircle, item.done && s.checkCircleDone]}>
-          {item.done && <Ionicons name="checkmark" size={11} color={colors.white} />}
+          {item.done && (
+            <Ionicons name="checkmark" size={11} color={colors.white} />
+          )}
         </View>
       </TouchableOpacity>
-      <Text style={[s.checkText, item.done && s.checkTextDone]} numberOfLines={2}>
+      <Text
+        style={[s.checkText, item.done && s.checkTextDone]}
+        numberOfLines={2}
+      >
         {item.text}
       </Text>
       <View style={[s.catPill, { backgroundColor: cs.bg }]}>
@@ -119,7 +126,7 @@ function CheckRow({
 export default function HomeScreen() {
   const nav = useRouter();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+
   const {
     trips,
     activeTrip,
@@ -140,18 +147,7 @@ export default function HomeScreen() {
   const [newItemText, setNewItemText] = useState("");
 
   const scrollY = useRef(new Animated.Value(0)).current;
-  const heroScale = scrollY.interpolate({
-    inputRange: [0, 100],
-    outputRange: [1, 0.95],
-    extrapolate: 'clamp',
-  });
-  const heroOpacity = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [1, 0.85],
-    extrapolate: 'clamp',
-  });
 
-  // Show empty state when no trips
   if (trips.length === 0) {
     return <EmptyStateTrips />;
   }
@@ -184,7 +180,10 @@ export default function HomeScreen() {
       : []);
 
   const visaWarnings = activeTrip
-    ? getVisaWarnings(activeTrip.destinations ?? [], activeTrip.origin ?? "Brasil")
+    ? getVisaWarnings(
+        activeTrip.destinations ?? [],
+        activeTrip.origin ?? "Brasil",
+      )
     : [];
 
   const handleAddItem = async () => {
@@ -195,7 +194,6 @@ export default function HomeScreen() {
     setShowAddItem(false);
   };
 
-  /* ── hero content ── */
   const heroContent = (
     <>
       <LinearGradient
@@ -234,7 +232,10 @@ export default function HomeScreen() {
               style={s.editBtn}
               onPress={() =>
                 activeTrip
-                  ? nav.push({ pathname: "/trips", params: { tripId: activeTrip.id } })
+                  ? nav.push({
+                      pathname: "/trips",
+                      params: { tripId: activeTrip.id },
+                    })
                   : nav.push("/trips")
               }
               activeOpacity={0.8}
@@ -267,7 +268,6 @@ export default function HomeScreen() {
 
   return (
     <View style={s.root}>
-      {/* ── HERO ── */}
       <View style={s.heroWrap}>
         {coverUri ? (
           <ImageBackground
@@ -283,10 +283,6 @@ export default function HomeScreen() {
         {heroContent}
       </View>
 
-      {/* ── FAT CLOUD DIVIDER ── */}
-      <CloudDivider color={colors.offwhite} width={width} />
-
-      {/* ── WHITE SHEET ── */}
       <Animated.ScrollView
         style={s.sheet}
         contentContainerStyle={s.sheetContent}
@@ -297,7 +293,6 @@ export default function HomeScreen() {
         )}
         scrollEventThrottle={16}
       >
-        {/* trip chips */}
         <Text style={s.secLabel}>suas viagens</Text>
         <ScrollView
           horizontal
@@ -329,10 +324,9 @@ export default function HomeScreen() {
           </LinearGradient>
         </ScrollView>
 
-        {/* stats */}
         <View style={s.statRow}>
           <LinearGradient
-            colors={['rgba(107,169,160,0.08)', 'rgba(107,169,160,0.03)']}
+            colors={["rgba(107,169,160,0.08)", "rgba(107,169,160,0.03)"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={s.statCardGrad}
@@ -343,7 +337,7 @@ export default function HomeScreen() {
             />
           </LinearGradient>
           <LinearGradient
-            colors={['rgba(123,104,182,0.08)', 'rgba(123,104,182,0.03)']}
+            colors={["rgba(123,104,182,0.08)", "rgba(123,104,182,0.03)"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={s.statCardGrad}
@@ -351,32 +345,38 @@ export default function HomeScreen() {
             <StatCard value={String(nights)} label="noites" />
           </LinearGradient>
           <LinearGradient
-            colors={['rgba(216,168,196,0.08)', 'rgba(216,168,196,0.03)']}
+            colors={["rgba(216,168,196,0.08)", "rgba(216,168,196,0.03)"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={s.statCardGrad}
           >
             <StatCard
-              value={activeChecks.length > 0 ? `${doneChecks}/${activeChecks.length}` : "–"}
+              value={
+                activeChecks.length > 0
+                  ? `${doneChecks}/${activeChecks.length}`
+                  : "–"
+              }
               label="checklist"
             />
           </LinearGradient>
         </View>
 
-        {/* visa warning */}
         {visaWarnings.length > 0 && (
           <View style={s.visaCard}>
             <View style={s.visaHeader}>
               <Ionicons name="alert-circle" size={15} color={colors.warning} />
-              <Text style={s.visaTitle}>atenção: visto pode ser necessário</Text>
+              <Text style={s.visaTitle}>
+                atenção: visto pode ser necessário
+              </Text>
             </View>
             {visaWarnings.map((w, i) => (
-              <Text key={i} style={s.visaMsg}>• {w.message}</Text>
+              <Text key={i} style={s.visaMsg}>
+                • {w.message}
+              </Text>
             ))}
           </View>
         )}
 
-        {/* checklist */}
         {activeTrip && (
           <>
             <View style={s.secRow}>
@@ -387,7 +387,9 @@ export default function HomeScreen() {
                 hitSlop={8}
               >
                 <Ionicons
-                  name={showAddItem ? "close-circle-outline" : "add-circle-outline"}
+                  name={
+                    showAddItem ? "close-circle-outline" : "add-circle-outline"
+                  }
                   size={18}
                   color={colors.teal2}
                 />
@@ -395,58 +397,59 @@ export default function HomeScreen() {
             </View>
 
             <LinearGradient
-              colors={['rgba(255,255,255,0.95)', 'rgba(245,243,240,0.98)']}
+              colors={["rgba(255,255,255,0.95)", "rgba(245,243,240,0.98)"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 0.5, y: 1 }}
               style={s.cardGrad}
             >
               <View style={s.card}>
                 {activeChecks.length === 0 && (
-                  <Text style={s.emptyCheck}>Nenhum item no checklist ainda.</Text>
+                  <Text style={s.emptyCheck}>
+                    Nenhum item no checklist ainda.
+                  </Text>
                 )}
-              {activeChecks.map((item: CheckItem, i: number) => (
-                <CheckRow
-                  key={item.id}
-                  item={item}
-                  onToggle={() => toggleCheck(item.id)}
-                  onDelete={() => deleteCheck(item.id)}
-                />
-              ))}
-
-              {showAddItem && (
-                <View style={s.addRow}>
-                  <TextInput
-                    style={s.addInput}
-                    value={newItemText}
-                    onChangeText={setNewItemText}
-                    placeholder="novo item..."
-                    placeholderTextColor={colors.muted}
-                    autoFocus
-                    returnKeyType="done"
-                    onSubmitEditing={handleAddItem}
+                {activeChecks.map((item: CheckItem, i: number) => (
+                  <CheckRow
+                    key={item.id}
+                    item={item}
+                    onToggle={() => toggleCheck(item.id)}
+                    onDelete={() => deleteCheck(item.id)}
                   />
-                  <LinearGradient
-                    colors={[colors.blush, colors.accent]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={s.addBtnGrad}
-                  >
-                    <TouchableOpacity
-                      style={s.addBtn}
-                      onPress={handleAddItem}
-                      activeOpacity={0.8}
+                ))}
+
+                {showAddItem && (
+                  <View style={s.addRow}>
+                    <TextInput
+                      style={s.addInput}
+                      value={newItemText}
+                      onChangeText={setNewItemText}
+                      placeholder="novo item..."
+                      placeholderTextColor={colors.muted}
+                      autoFocus
+                      returnKeyType="done"
+                      onSubmitEditing={handleAddItem}
+                    />
+                    <LinearGradient
+                      colors={[colors.blush, colors.accent]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={s.addBtnGrad}
                     >
-                      <Text style={s.addBtnText}>adicionar</Text>
-                    </TouchableOpacity>
-                  </LinearGradient>
-                </View>
-              )}
+                      <TouchableOpacity
+                        style={s.addBtn}
+                        onPress={handleAddItem}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={s.addBtnText}>adicionar</Text>
+                      </TouchableOpacity>
+                    </LinearGradient>
+                  </View>
+                )}
               </View>
             </LinearGradient>
           </>
         )}
 
-        {/* looks gallery */}
         {activeTrip && (
           <>
             <View style={s.secRow}>
@@ -467,15 +470,24 @@ export default function HomeScreen() {
                 activeOpacity={0.8}
               >
                 <Ionicons name="logo-pinterest" size={22} color="#E60023" />
-                <Text style={s.looksEmptyText}>Adicionar looks do Pinterest</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                <Text style={s.looksEmptyText}>
+                  Adicionar looks do Pinterest
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={colors.muted}
+                />
               </TouchableOpacity>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={s.looksScroll}
-                contentContainerStyle={{ gap: spacing.sm, paddingRight: spacing.lg }}
+                contentContainerStyle={{
+                  gap: spacing.sm,
+                  paddingRight: spacing.lg,
+                }}
               >
                 {activeLooks.map((look: LookPin) => (
                   <View key={look.id} style={s.lookCard}>
@@ -489,7 +501,11 @@ export default function HomeScreen() {
                       onPress={() => removeLook(look.id)}
                       hitSlop={4}
                     >
-                      <Ionicons name="close-circle" size={18} color={colors.white} />
+                      <Ionicons
+                        name="close-circle"
+                        size={18}
+                        color={colors.white}
+                      />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -505,7 +521,6 @@ export default function HomeScreen() {
           </>
         )}
 
-        {/* places gallery */}
         {activeTrip && (
           <>
             <View style={s.secRow}>
@@ -515,7 +530,11 @@ export default function HomeScreen() {
                 style={s.addIconBtn}
                 hitSlop={8}
               >
-                <Ionicons name="add-circle-outline" size={18} color={colors.teal2} />
+                <Ionicons
+                  name="add-circle-outline"
+                  size={18}
+                  color={colors.teal2}
+                />
               </TouchableOpacity>
             </View>
 
@@ -526,15 +545,24 @@ export default function HomeScreen() {
                 activeOpacity={0.8}
               >
                 <Ionicons name="map-outline" size={20} color={colors.teal2} />
-                <Text style={s.looksEmptyText}>Adicionar lugares para visitar</Text>
-                <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+                <Text style={s.looksEmptyText}>
+                  Adicionar lugares para visitar
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={colors.muted}
+                />
               </TouchableOpacity>
             ) : (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={s.looksScroll}
-                contentContainerStyle={{ gap: spacing.sm, paddingRight: spacing.lg }}
+                contentContainerStyle={{
+                  gap: spacing.sm,
+                  paddingRight: spacing.lg,
+                }}
               >
                 {activePlaces.map((place: PlacePin) => (
                   <View key={place.id} style={s.placeCard}>
@@ -544,14 +572,20 @@ export default function HomeScreen() {
                       contentFit="cover"
                     />
                     <View style={s.placeGrad}>
-                      <Text style={s.placeName} numberOfLines={1}>{place.name}</Text>
+                      <Text style={s.placeName} numberOfLines={1}>
+                        {place.name}
+                      </Text>
                     </View>
                     <TouchableOpacity
                       style={s.lookRemove}
                       onPress={() => removePlace(place.id)}
                       hitSlop={4}
                     >
-                      <Ionicons name="close-circle" size={18} color={colors.white} />
+                      <Ionicons
+                        name="close-circle"
+                        size={18}
+                        color={colors.white}
+                      />
                     </TouchableOpacity>
                   </View>
                 ))}
@@ -567,7 +601,6 @@ export default function HomeScreen() {
           </>
         )}
 
-        {/* next flight highlight */}
         {activeTrip && (
           <LinearGradient
             colors={[colors.teal, colors.sage]}
@@ -591,14 +624,13 @@ export default function HomeScreen() {
           </LinearGradient>
         )}
 
-        {/* confirmations */}
         {activeTrip && (activeTrip.flightConf || activeTrip.hotelConf) && (
           <>
             <Text style={s.secLabel}>confirmações</Text>
             <View style={s.confRow}>
               {activeTrip.flightConf && (
                 <LinearGradient
-                  colors={['rgba(123,104,182,0.08)', 'rgba(123,104,182,0.02)']}
+                  colors={["rgba(123,104,182,0.08)", "rgba(123,104,182,0.02)"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={s.confCardGrad}
@@ -621,7 +653,7 @@ export default function HomeScreen() {
               )}
               {activeTrip.hotelConf && (
                 <LinearGradient
-                  colors={['rgba(107,169,160,0.08)', 'rgba(107,169,160,0.02)']}
+                  colors={["rgba(107,169,160,0.08)", "rgba(107,169,160,0.02)"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={s.confCardGrad}
@@ -638,7 +670,9 @@ export default function HomeScreen() {
                     <Text style={[s.confValue, { color: colors.teal2 }]}>
                       {activeTrip.hotelConf}
                     </Text>
-                    <Text style={s.confSub}>{activeTrip.destinations?.[0]}</Text>
+                    <Text style={s.confSub}>
+                      {activeTrip.destinations?.[0]}
+                    </Text>
                   </View>
                 </LinearGradient>
               )}
@@ -652,8 +686,6 @@ export default function HomeScreen() {
   );
 }
 
-/* ─── styles ─────────────────────────────────────────────────── */
-
 const HERO_HEIGHT = 280;
 
 const s = StyleSheet.create({
@@ -663,7 +695,13 @@ const s = StyleSheet.create({
   heroWrap: {
     height: HERO_HEIGHT,
     backgroundColor: colors.navyDeep,
-    overflow: "hidden",
+    overflow: "visible",
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    marginBottom: -spacing.lg,
+    borderBottomLeftRadius: radius.xl,
+    borderBottomRightRadius: radius.xl,
+    ...shadow.md,
   },
   dots: {
     ...StyleSheet.absoluteFillObject,
@@ -708,7 +746,7 @@ const s = StyleSheet.create({
     height: 40,
     borderRadius: radius.full,
     marginTop: 2,
-    overflow: 'hidden',
+    overflow: "hidden",
     shadowColor: colors.blush,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -756,10 +794,14 @@ const s = StyleSheet.create({
   },
 
   /* sheet */
-  sheet: { flex: 1, backgroundColor: colors.offwhite },
+  sheet: {
+    flex: 1,
+    backgroundColor: colors.offwhite,
+    marginHorizontal: spacing.lg,
+  },
   sheetContent: {
     paddingHorizontal: spacing.lg,
-    paddingTop: 2,
+    paddingTop: spacing.lg,
     paddingBottom: 20,
   },
 
@@ -807,7 +849,7 @@ const s = StyleSheet.create({
   chipAddGrad: {
     borderRadius: radius.full,
     marginRight: spacing.sm,
-    overflow: 'hidden',
+    overflow: "hidden",
     shadowColor: colors.sage,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -831,7 +873,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 0,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...shadow.sm,
   },
   statCard: {
@@ -866,8 +908,18 @@ const s = StyleSheet.create({
     gap: 6,
     marginBottom: spacing.xs,
   },
-  visaTitle: { fontSize: 11, fontWeight: "800", color: colors.warning, flex: 1 },
-  visaMsg:   { fontSize: 11, fontWeight: "600", color: colors.warning, marginBottom: 2 },
+  visaTitle: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: colors.warning,
+    flex: 1,
+  },
+  visaMsg: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: colors.warning,
+    marginBottom: 2,
+  },
 
   /* card */
   cardGrad: {
@@ -875,7 +927,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     marginBottom: spacing.md,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...shadow.sm,
   },
   card: {
@@ -915,7 +967,11 @@ const s = StyleSheet.create({
   },
   checkText: { flex: 1, fontSize: 12, fontWeight: "700", color: colors.navy },
   checkTextDone: { color: colors.muted, textDecorationLine: "line-through" },
-  catPill: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: radius.full },
+  catPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
   catPillText: { fontSize: 9, fontWeight: "800" },
   deleteBtn: { paddingLeft: 4 },
 
@@ -943,7 +999,7 @@ const s = StyleSheet.create({
   },
   addBtnGrad: {
     borderRadius: radius.md,
-    overflow: 'hidden',
+    overflow: "hidden",
     shadowColor: colors.blush,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
@@ -953,8 +1009,8 @@ const s = StyleSheet.create({
   addBtn: {
     paddingHorizontal: spacing.md,
     paddingVertical: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   addBtnText: { fontSize: 12, fontWeight: "800", color: colors.white },
 
@@ -981,7 +1037,7 @@ const s = StyleSheet.create({
   tealCardGrad: {
     borderRadius: radius.xl,
     marginBottom: spacing.md,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...shadow.teal,
   },
   tealCard: {
@@ -1022,7 +1078,12 @@ const s = StyleSheet.create({
     marginBottom: spacing.md,
     ...shadow.sm,
   },
-  looksEmptyText: { flex: 1, fontSize: 13, fontWeight: "700", color: colors.muted },
+  looksEmptyText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.muted,
+  },
   lookCard: {
     width: 110,
     height: 150,
@@ -1057,7 +1118,7 @@ const s = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...shadow.sm,
   },
   confCard: {

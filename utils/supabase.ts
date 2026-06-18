@@ -19,10 +19,9 @@ class NoopWebSocket {
 export const supabase = URL && KEY
   ? createClient(URL, KEY, {
       auth: {
-        storage: AsyncStorage,
-        autoRefreshToken: false,
-        persistSession: false,
-        detectSessionInUrl: false,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
       },
       realtime: typeof WebSocket === 'undefined'
         ? { transport: NoopWebSocket as any }

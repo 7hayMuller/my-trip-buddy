@@ -1,8 +1,6 @@
-import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState } from "react";
+import * as Linking from "expo-linking";
 import { supabase } from "../utils/supabase";
-
-WebBrowser.maybeCompleteAuthSession();
 
 export function useAuth() {
   const [user, setUser] = useState<any>(null);
@@ -10,6 +8,26 @@ export function useAuth() {
 
   useEffect(() => {
     checkUser();
+
+    const { data: { subscription } } = supabase?.auth.onAuthStateChange?.((event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+      } else {
+        setUser(null);
+      }
+    }) ?? { data: { subscription: null } };
+
+    // Ouvir deep links para redirecionar após clique no email
+    const subscription2 = Linking.addEventListener("url", ({ url }) => {
+      console.log("🔗 Deep link chegou:", url);
+      // Tenta recuperar sessão quando deep link chegar
+      checkUser();
+    });
+
+    return () => {
+      subscription?.unsubscribe?.();
+      subscription2.remove();
+    };
   }, []);
 
   async function checkUser() {
@@ -27,42 +45,48 @@ export function useAuth() {
     }
   }
 
-  async function loginWithGoogle() {
-    if (!supabase) return;
+  async function loginWithEmail(email: string) {
+    if (!supabase) return { error: "Supabase não configurado" };
 
     try {
-      setLoading(true);
+      console.log("📧 Enviando código para:", email);
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
         options: {
-          skipBrowserRedirect: true,
+          shouldCreateUser: true,
         },
       });
 
       if (error) throw error;
-      if (!data?.url) throw new Error("No auth URL returned");
+      return { success: true };
+    } catch (error: any) {
+      console.error("Erro ao enviar código:", error);
+      return { error: error.message || "Erro ao enviar código" };
+    }
+  }
 
-      // Open browser and wait for callback
-      const result = await WebBrowser.openAuthSessionAsync(
-        data.url,
-        "myappscheme://callback"
-      );
+  async function verifyCode(email: string, token: string) {
+    if (!supabase) return { error: "Supabase não configurado" };
 
-      if (result.type === "success") {
-        // Give Supabase time to process the callback
-        await new Promise(resolve => setTimeout(resolve, 1500));
+    try {
+      console.log("🔐 Verificando código:", token);
 
-        // Get the session that should now be created
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          setUser(session.user);
-        }
+      const { data, error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: "email",
+      });
+
+      if (error) throw error;
+      if (data?.session?.user) {
+        setUser(data.session.user);
+        return { success: true };
       }
-    } catch (error) {
-      console.error("Erro ao fazer login:", error);
-    } finally {
-      setLoading(false);
+      return { error: "Código inválido" };
+    } catch (error: any) {
+      console.error("Erro ao verificar código:", error);
+      return { error: error.message || "Código inválido" };
     }
   }
 
@@ -80,7 +104,8 @@ export function useAuth() {
   return {
     user,
     loading,
-    loginWithGoogle,
+    loginWithEmail,
+    verifyCode,
     logout,
     isSignedIn: !!user,
   };

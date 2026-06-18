@@ -1,6 +1,6 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   StyleSheet,
   Text,
@@ -8,6 +8,8 @@ import {
   View,
   ActivityIndicator,
   Animated,
+  TextInput,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,7 +19,10 @@ import { colors, spacing, radius } from "../theme";
 export default function LoginScreen() {
   const nav = useRouter();
   const insets = useSafeAreaInsets();
-  const { loginWithGoogle, loading, isSignedIn } = useAuth();
+  const { loginWithEmail, verifyCode, loading, isSignedIn } = useAuth();
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [sent, setSent] = useState(false);
 
   const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
 
@@ -37,6 +42,50 @@ export default function LoginScreen() {
       useNativeDriver: true,
     }).start();
   }, []);
+
+  const handleLogin = async () => {
+    if (!email.trim()) {
+      Alert.alert("Email obrigatório", "Digite seu email para continuar");
+      return;
+    }
+
+    const result = await loginWithEmail(email);
+    if (result.success) {
+      setSent(true);
+      Alert.alert(
+        "Link enviado!",
+        `Verifique seu email (${email}) e clique no link para acessar`,
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              setEmail("");
+              setSent(false);
+            },
+          },
+        ]
+      );
+    } else {
+      Alert.alert("Erro", result.error || "Erro ao enviar link");
+    }
+  };
+
+  const handleVerifyCode = async () => {
+    if (!code.trim()) {
+      Alert.alert("Código obrigatório", "Digite o código recebido no email");
+      return;
+    }
+
+    const result = await verifyCode(email, code);
+    if (result.success) {
+      setCode("");
+      setSent(false);
+      setEmail("");
+      // isSignedIn vai mudar e redirecionar automaticamente
+    } else {
+      Alert.alert("Erro", result.error || "Código inválido");
+    }
+  };
 
   return (
     <View style={s.root}>
@@ -75,36 +124,108 @@ export default function LoginScreen() {
         </View>
       </View>
 
-      {/* Login Button */}
+      {/* Login Section */}
       <View style={[s.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
-        <TouchableOpacity
-          style={s.googleButton}
-          onPress={loginWithGoogle}
-          disabled={loading}
-          activeOpacity={0.85}
-        >
-          <LinearGradient
-            colors={["#4285F4", "#3367D6"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.buttonGrad}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.white} size="small" />
-            ) : (
-              <>
-                <Ionicons name="logo-google" size={20} color={colors.white} />
-                <Text style={s.buttonText}>Continuar com Google</Text>
-              </>
-            )}
-          </LinearGradient>
-        </TouchableOpacity>
+        {!sent ? (
+          <>
+            <View>
+              <Text style={s.inputLabel}>Email</Text>
+              <TextInput
+                style={s.input}
+                placeholder="seu@email.com"
+                value={email}
+                onChangeText={setEmail}
+                editable={!loading}
+                placeholderTextColor={colors.muted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
 
-        <Text style={s.terms}>
-          Ao continuar, você concorda com nossos{"\n"}
-          <Text style={s.termsLink}>Termos de Serviço</Text> e{" "}
-          <Text style={s.termsLink}>Privacidade</Text>
-        </Text>
+            <TouchableOpacity
+              style={[s.button, (loading || !email.trim()) && s.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={loading || !email.trim()}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={
+                  loading || !email.trim()
+                    ? [colors.border, colors.border]
+                    : [colors.blush, "#D4697B"]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.buttonGrad}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="mail" size={20} color={colors.white} />
+                    <Text style={s.buttonText}>Enviar link de acesso</Text>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <Text style={s.terms}>
+              Enviaremos um link seguro{"\n"}para seu email
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text style={s.sentTitle}>Código enviado! ✅</Text>
+            <Text style={s.sentSubtitle}>
+              Verifique seu email e digite o código de 6 dígitos
+            </Text>
+
+            <View>
+              <Text style={s.inputLabel}>Código</Text>
+              <TextInput
+                style={s.input}
+                placeholder="000000"
+                value={code}
+                onChangeText={setCode}
+                editable={!loading}
+                placeholderTextColor={colors.muted}
+                keyboardType="number-pad"
+                maxLength={6}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[s.button, (loading || !code.trim()) && s.buttonDisabled]}
+              onPress={handleVerifyCode}
+              disabled={loading || !code.trim()}
+              activeOpacity={0.85}
+            >
+              <LinearGradient
+                colors={
+                  loading || !code.trim()
+                    ? [colors.border, colors.border]
+                    : [colors.blush, "#D4697B"]
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={s.buttonGrad}
+              >
+                {loading ? (
+                  <ActivityIndicator color={colors.white} size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={20} color={colors.white} />
+                    <Text style={s.buttonText}>Verificar código</Text>
+                  </>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={() => { setSent(false); setEmail(""); setCode(""); }}>
+              <Text style={s.changeEmail}>Usar outro email</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
     </View>
   );
@@ -230,14 +351,38 @@ const s = StyleSheet.create({
     gap: spacing.md,
   },
 
-  googleButton: {
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.navy,
+    marginBottom: spacing.sm,
+  },
+
+  input: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    fontSize: 15,
+    color: colors.navy,
+    marginBottom: spacing.md,
+    backgroundColor: colors.white,
+  },
+
+  button: {
     borderRadius: radius.lg,
     overflow: "hidden",
-    shadowColor: "#4285F4",
+    shadowColor: colors.blush,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 8,
+  },
+
+  buttonDisabled: {
+    shadowOpacity: 0,
+    elevation: 0,
   },
 
   buttonGrad: {
@@ -266,6 +411,31 @@ const s = StyleSheet.create({
   termsLink: {
     color: colors.navy,
     fontWeight: "700",
+    textDecorationLine: "underline",
+  },
+
+  sentTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: colors.navy,
+    textAlign: "center",
+    marginBottom: spacing.sm,
+  },
+
+  sentSubtitle: {
+    fontSize: 14,
+    color: colors.muted,
+    textAlign: "center",
+    marginBottom: spacing.lg,
+    fontWeight: "500",
+  },
+
+  changeEmail: {
+    fontSize: 13,
+    color: colors.blush,
+    textAlign: "center",
+    fontWeight: "700",
+    marginTop: spacing.md,
     textDecorationLine: "underline",
   },
 });

@@ -1,6 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
+import { ResizeMode, Video } from "expo-av";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useRef } from "react";
 import {
   Animated,
   StyleSheet,
@@ -8,15 +10,17 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { colors, spacing } from "../theme";
 
 export function EmptyStateTrips() {
   const nav = useRouter();
   const floatAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  const feature1Anim = useRef(new Animated.Value(0)).current;
+  const feature2Anim = useRef(new Animated.Value(0)).current;
+  const feature3Anim = useRef(new Animated.Value(0)).current;
 
-  useEffect(() => {
+  React.useEffect(() => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, {
@@ -38,55 +42,72 @@ export function EmptyStateTrips() {
       speed: 8,
       bounciness: 8,
     }).start();
-  }, []);
 
-  const floatInterpolate = floatAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0, 20],
+    Animated.sequence([
+      Animated.timing(feature1Anim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(feature2Anim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(feature3Anim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [feature1Anim, feature2Anim, feature3Anim, floatAnim, scaleAnim]);
+
+  const createFeatureAnimStyle = (anim: Animated.Value) => ({
+    opacity: anim,
+    transform: [
+      {
+        translateX: anim.interpolate({
+          inputRange: [0, 1],
+          outputRange: [-60, 0],
+        }),
+      },
+    ],
   });
 
   return (
     <View style={s.container}>
+      <Video
+        source={require("../assets/videos/sky.mp4")}
+        rate={1.0}
+        volume={0}
+        isMuted={true}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        style={StyleSheet.absoluteFill}
+      />
       <LinearGradient
-        colors={[colors.blushLight, colors.tealLight]}
+        colors={[
+          "rgba(17,30,53,0.3)",
+          "rgba(17,30,53,0.5)",
+          "rgba(17,30,53,0.7)",
+        ]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={s.background}
-      >
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={s.background}>
         <View style={s.content}>
-          {/* Animated floating icon */}
-          <Animated.View
-            style={[
-              s.iconContainer,
-              {
-                transform: [
-                  { translateY: floatInterpolate },
-                  { scale: scaleAnim },
-                ],
-              },
-            ]}
-          >
-            <LinearGradient
-              colors={[colors.blush, colors.accent]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={s.iconGradient}
-            >
-              <Ionicons name="airplane" size={64} color={colors.white} />
-            </LinearGradient>
-          </Animated.View>
+          <Text style={s.heading}>Vem aí a viagem dos seus sonhos!</Text>
 
-          {/* Heading */}
-          <Text style={s.heading}>Sua Próxima Aventura Aguarda!</Text>
-
-          {/* Subheading */}
           <Text style={s.subheading}>
             Organize uma viagem incrível e comece a planejar cada detalhe
           </Text>
 
-          {/* Features list */}
           <View style={s.featuresList}>
-            <View style={s.featureItem}>
+            <Animated.View
+              style={[s.featureItem, createFeatureAnimStyle(feature1Anim)]}
+            >
               <LinearGradient
                 colors={[colors.purple, colors.blush]}
                 start={{ x: 0, y: 0 }}
@@ -95,10 +116,12 @@ export function EmptyStateTrips() {
               >
                 <Ionicons name="checkmark" size={16} color={colors.white} />
               </LinearGradient>
-              <Text style={s.featureText}>Checklist automático</Text>
-            </View>
+              <Text style={s.featureText}>Crie um checklist personalizado</Text>
+            </Animated.View>
 
-            <View style={s.featureItem}>
+            <Animated.View
+              style={[s.featureItem, createFeatureAnimStyle(feature2Anim)]}
+            >
               <LinearGradient
                 colors={[colors.sage, colors.teal]}
                 start={{ x: 0, y: 0 }}
@@ -107,10 +130,14 @@ export function EmptyStateTrips() {
               >
                 <Ionicons name="image" size={16} color={colors.white} />
               </LinearGradient>
-              <Text style={s.featureText}>Looks & inspiração</Text>
-            </View>
+              <Text style={s.featureText}>
+                Escolha seus looks para a viagem
+              </Text>
+            </Animated.View>
 
-            <View style={s.featureItem}>
+            <Animated.View
+              style={[s.featureItem, createFeatureAnimStyle(feature3Anim)]}
+            >
               <LinearGradient
                 colors={[colors.gold, colors.accent]}
                 start={{ x: 0, y: 0 }}
@@ -119,11 +146,10 @@ export function EmptyStateTrips() {
               >
                 <Ionicons name="map" size={16} color={colors.white} />
               </LinearGradient>
-              <Text style={s.featureText}>Mapa de destinos</Text>
-            </View>
+              <Text style={s.featureText}>Separe os pontos de visitação</Text>
+            </Animated.View>
           </View>
 
-          {/* CTA Button */}
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => nav.push("/trips")}
@@ -135,20 +161,12 @@ export function EmptyStateTrips() {
               end={{ x: 1, y: 1 }}
               style={s.button}
             >
-              <Text style={s.buttonText}>Criar Minha Primeira Viagem</Text>
+              <Text style={s.buttonText}>Organizar minha viagem agora</Text>
               <Ionicons name="arrow-forward" size={18} color={colors.white} />
             </LinearGradient>
           </TouchableOpacity>
-
-          {/* Secondary CTA */}
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={() => nav.push("/trips")}
-          >
-            <Text style={s.secondaryCTA}>Ver todas as opções →</Text>
-          </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
     </View>
   );
 }
@@ -185,14 +203,14 @@ const s = StyleSheet.create({
   heading: {
     fontSize: 28,
     fontWeight: "900",
-    color: colors.navy,
+    color: "#ffffff",
     textAlign: "center",
     marginBottom: spacing.sm,
     lineHeight: 34,
   },
   subheading: {
     fontSize: 15,
-    color: colors.muted,
+    color: "rgba(255,255,255,0.85)",
     textAlign: "center",
     marginBottom: spacing.xl,
     lineHeight: 22,
@@ -208,12 +226,12 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    backgroundColor: "rgba(255,255,255,0.6)",
+    backgroundColor: "rgba(255,255,255,0.15)",
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.8)",
+    borderColor: "rgba(255,255,255,0.3)",
   },
   featureBadge: {
     width: 36,
@@ -226,7 +244,7 @@ const s = StyleSheet.create({
   featureText: {
     fontSize: 14,
     fontWeight: "700",
-    color: colors.navy,
+    color: "#ffffff",
     flex: 1,
   },
   buttonWrapper: {
@@ -255,7 +273,7 @@ const s = StyleSheet.create({
   secondaryCTA: {
     fontSize: 14,
     fontWeight: "700",
-    color: colors.navy,
+    color: "#ffffff",
     textDecorationLine: "underline",
   },
 });

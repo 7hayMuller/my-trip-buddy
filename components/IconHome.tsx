@@ -112,5 +112,5 @@ interface EllipseProps {
 }
 
 function Ellipse({ cx, cy, rx, ry, fill }: EllipseProps) {
-  return <circle cx={cx} cy={cy} r={rx} fill={fill} />;
+  return <Circle cx={cx} cy={cy} r={rx} fill={fill} />;
 }

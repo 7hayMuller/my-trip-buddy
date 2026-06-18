@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Path, Rect, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Rect, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 interface IconSuitcaseProps {
   size?: number;
@@ -97,8 +97,4 @@ export function IconSuitcase({ size = 28, color }: IconSuitcaseProps) {
       />
     </Svg>
   );
-}
-
-function Circle({ cx, cy, r, fill }: { cx: number; cy: number; r: number; fill: string }) {
-  return <circle cx={cx} cy={cy} r={r} fill={fill} />;
 }

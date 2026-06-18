@@ -3,7 +3,7 @@ import { differenceInDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -243,6 +243,9 @@ export default function AddTripScreen() {
     return [{ name: "", conf: "", dest: initialDests[0] ?? "" }];
   });
 
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const scrollRef = useRef<ScrollView>(null);
+
   // ── helpers ────────────────────────────────────────────────────────────────
 
   const nights = (() => {
@@ -291,25 +294,32 @@ export default function AddTripScreen() {
   // ── validation ─────────────────────────────────────────────────────────────
 
   const validateStep = (n: number): boolean => {
+    const newErrors: { [key: string]: string } = {};
+
     if (n === 1) {
       if (!name.trim()) {
-        Alert.alert("Ops!", "Dê um nome para a viagem.");
-        return false;
+        newErrors.name = "Dê um nome para a viagem";
       }
       if (!depart) {
-        Alert.alert("Ops!", "Informe a data de partida.");
-        return false;
+        newErrors.depart = "Informe a data de partida";
       }
     }
     if (n === 2) {
       if (!flights.some((f) => f.flightNumber.trim())) {
-        Alert.alert("Ops!", "Informe pelo menos um número de voo.\nEx: JL047");
-        return false;
+        newErrors.flights = "Informe pelo menos um número de voo";
       }
       if (!hotels.some((h) => h.name.trim())) {
-        Alert.alert("Ops!", "Informe pelo menos um hotel.");
-        return false;
+        newErrors.hotels = "Informe pelo menos um hotel";
       }
+    }
+
+    setErrors(newErrors);
+
+    if (Object.keys(newErrors).length > 0) {
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      }, 100);
+      return false;
     }
     return true;
   };
@@ -400,6 +410,7 @@ export default function AddTripScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
       >
         <ScrollView
+          ref={scrollRef}
           style={s.sheet}
           contentContainerStyle={s.sheetContent}
           showsVerticalScrollIndicator={false}
@@ -412,12 +423,17 @@ export default function AddTripScreen() {
               <View style={s.card}>
                 <Label text="nome da viagem" />
                 <TextInput
-                  style={s.input}
+                  style={[s.input, errors.name && { borderColor: "#E74C3C" }]}
                   value={name}
                   onChangeText={setName}
                   placeholder="ex: Japão setembro 2025"
                   placeholderTextColor={colors.muted}
                 />
+                {errors.name && (
+                  <Text style={{ fontSize: 12, color: "#E74C3C", marginTop: 6 }}>
+                    {errors.name}
+                  </Text>
+                )}
 
                 <View style={{ height: spacing.md }} />
 
@@ -472,7 +488,7 @@ export default function AddTripScreen() {
                   <View style={{ flex: 1 }}>
                     <Label text="partida" />
                     <TextInput
-                      style={s.input}
+                      style={[s.input, errors.depart && { borderColor: "#E74C3C" }]}
                       value={depart}
                       onChangeText={(v) => setDepart(maskDate(v))}
                       placeholder="AAAA-MM-DD"
@@ -480,6 +496,11 @@ export default function AddTripScreen() {
                       keyboardType="number-pad"
                       maxLength={10}
                     />
+                    {errors.depart && (
+                      <Text style={{ fontSize: 12, color: "#E74C3C", marginTop: 6 }}>
+                        {errors.depart}
+                      </Text>
+                    )}
                   </View>
                   <View style={{ width: spacing.sm }} />
                   <View style={{ flex: 1 }}>
@@ -604,6 +625,11 @@ export default function AddTripScreen() {
                 />
                 <Text style={s.addEntryText}>adicionar voo</Text>
               </TouchableOpacity>
+              {errors.flights && (
+                <Text style={{ fontSize: 12, color: "#E74C3C", marginTop: 6 }}>
+                  {errors.flights}
+                </Text>
+              )}
 
               {/* ── HOTÉIS ── */}
               <SectionLabel text="seus hotéis" />
@@ -698,6 +724,11 @@ export default function AddTripScreen() {
                 />
                 <Text style={s.addEntryText}>adicionar hotel</Text>
               </TouchableOpacity>
+              {errors.hotels && (
+                <Text style={{ fontSize: 12, color: "#E74C3C", marginTop: 6 }}>
+                  {errors.hotels}
+                </Text>
+              )}
 
               <NavButtons
                 step={2}
