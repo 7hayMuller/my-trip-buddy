@@ -1,49 +1,54 @@
 export const colors = {
-  // 2025 trend palette - modern & sophisticated
-  navy:        '#2D3E52',
-  navy2:       '#3A4B63',
-  navyDeep:    '#1F2D3D',
+  // Horizon palette — calm ocean + sunset energy
+  navy:        '#162032',
+  navy2:       '#1E2D42',
+  navyDeep:    '#0D1626',
 
-  // Modern accent colors
-  teal:        '#6BA9A0',
-  teal2:       '#5B9B91',
-  tealLight:   '#E8F4F2',
+  // Primary: vivid teal (ocean calm)
+  teal:        '#14B8A6',
+  teal2:       '#0D9488',
+  tealLight:   '#CCFBF1',
 
   white:       '#FFFFFF',
-  cream:       '#F9F7F4',
-  offwhite:    '#F5F3F0',
-  muted:       '#9BA5B0',
-  border:      '#E5E0DB',
-  ink:         '#2D3E52',
+  cream:       '#FAFBFE',
+  offwhite:    '#F1F5FB',
+  muted:       '#7E8EA6',
+  border:      '#DDE4EF',
+  ink:         '#162032',
 
-  // Trend colors: blush, sage, warm tones
-  accent:      '#D8A8C4',
-  accentLight: '#F7EAF3',
+  // Accent: coral-orange (sunset energy)
+  accent:      '#F97316',
+  accentLight: '#FFF7ED',
 
-  gold:        '#C9A86F',
-  goldLight:   '#F8F4ED',
+  // Gold: warm amber
+  gold:        '#F59E0B',
+  goldLight:   '#FFFBEB',
 
-  sage:        '#9CAF88',
-  sageLight:   '#EEF2EA',
+  // Sage: fresh grass green
+  sage:        '#22C55E',
+  sageLight:   '#F0FDF4',
 
-  purple:      '#7B68B6',
-  purpleLight: '#F0E9FE',
+  // Purple: electric violet
+  purple:      '#8B5CF6',
+  purpleLight: '#F5F3FF',
 
-  green:       '#7EA989',
-  greenLight:  '#E8F2ED',
+  // Green: emerald
+  green:       '#10B981',
+  greenLight:  '#ECFDF5',
 
-  blush:       '#E8A8C8',
-  blushLight:  '#F8E8F2',
+  // Blush: vibrant rose
+  blush:       '#FB7185',
+  blushLight:  '#FFF1F2',
 
-  // Hero gradients - updated for modern look
-  heroOverlay: 'rgba(45,62,82,0.5)',
-  heroGrad1:   'rgba(45,62,82,0.0)',
-  heroGrad2:   'rgba(45,62,82,0.65)',
-  heroGrad3:   'rgba(31,45,61,0.95)',
+  // Hero gradients
+  heroOverlay: 'rgba(22,32,50,0.5)',
+  heroGrad1:   'rgba(22,32,50,0.0)',
+  heroGrad2:   'rgba(22,32,50,0.65)',
+  heroGrad3:   'rgba(13,22,38,0.95)',
 
   // Glassmorphism effects
   routeLine:   'rgba(255,255,255,0.25)',
-  routeDot:    '#6BA9A0',
+  routeDot:    '#14B8A6',
   cdBg:        'rgba(255,255,255,0.08)',
   cdBorder:    'rgba(255,255,255,0.12)',
   cdNum:       '#FFFFFF',
@@ -54,10 +59,10 @@ export const colors = {
   warningLight: '#FEF5E7',
   warningBorder:'#F9E5B8',
 
-  // Gradient colors for visual interest
-  gradStart:   '#7B68B6',
-  gradMid:     '#D8A8C4',
-  gradEnd:     '#F8A8B8',
+  // Gradients: violet → coral → amber
+  gradStart:   '#8B5CF6',
+  gradMid:     '#F97316',
+  gradEnd:     '#F59E0B',
 } as const;
 
 export const fonts = {
@@ -129,6 +134,14 @@ export const DESTINATION_IMAGES: Record<string, string> = {
   'bali':       'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80',
   'default':    'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80',
 };
+
+export function getDestImage(dest: string): string {
+  const lower = dest.toLowerCase();
+  for (const [key, url] of Object.entries(DESTINATION_IMAGES)) {
+    if (lower.includes(key)) return url;
+  }
+  return DESTINATION_IMAGES['default'];
+}
 
 export function getTripImage(trip: { name: string; destinations: string[] }): string {
   const lower = [...trip.destinations, trip.name].join(' ').toLowerCase();

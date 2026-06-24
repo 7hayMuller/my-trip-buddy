@@ -1,21 +1,19 @@
-import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { colors } from "@/theme";
-import { useTrips } from "@/hooks/useTrips";
+import { Ionicons } from "@expo/vector-icons";
+import { Tabs } from "expo-router";
 
 export default function TabLayout() {
-  const { trips } = useTrips();
-  const hasTrips = trips && trips.length > 0;
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.blush,
-        tabBarInactiveTintColor: colors.navy,
+        tabBarActiveTintColor: colors.teal,
+        tabBarInactiveTintColor: colors.muted,
         headerShown: false,
         tabBarStyle: {
-          height: hasTrips ? 100 : 0,
-          paddingBottom: hasTrips ? 12 : 0,
+          backgroundColor: colors.navy,
+          borderTopColor: colors.offwhite,
+          height: 100,
+          paddingBottom: 5,
         },
       }}
     >
@@ -23,21 +21,27 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => <Ionicons name="home" size={24} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="home" size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="trips"
         options={{
           title: "Viagens",
-          tabBarIcon: ({ color }) => <Ionicons name="briefcase" size={24} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="briefcase" size={24} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Perfil",
-          tabBarIcon: ({ color }) => <Ionicons name="person" size={24} color={color} />,
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="person" size={24} color={color} />
+          ),
         }}
       />
     </Tabs>

@@ -8,21 +8,25 @@ import { Ionicons } from "@expo/vector-icons";
 import { differenceInDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import React, { useEffect, useState } from "react";
+import { Image } from "expo-image";
 import {
     ActivityIndicator,
-    Image,
     Linking,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from "react-native";
-import { colors, radius, shadow, spacing } from "../theme";
+import { colors, getDestImage, radius, shadow, spacing } from "../theme";
 import {
+    clearHotelCache,
     fetchHotelDetails,
     HotelDetails,
     priceLevelLabel,
 } from "../utils/hotelDataService";
+
+// Limpa cache na primeira montagem do app (garante refresh após troca de chave)
+let _cacheClearedOnce = false;
 
 interface HotelCardProps {
   hotelName: string;
@@ -43,11 +47,17 @@ export default function HotelCard({
 }: HotelCardProps) {
   const [details, setDetails] = useState<HotelDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [photoFailed, setPhotoFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
     (async () => {
+      setPhotoFailed(false);
       setLoading(true);
+      if (!_cacheClearedOnce) {
+        _cacheClearedOnce = true;
+        await clearHotelCache();
+      }
       const data = await fetchHotelDetails(hotelName, city);
       if (active) {
         setDetails(data);
@@ -89,18 +99,19 @@ export default function HotelCard({
           <View style={hc.photoPlaceholder}>
             <ActivityIndicator color={colors.teal} size="small" />
           </View>
-        ) : details?.photoUrl ? (
-          <Image
-            source={{ uri: details.photoUrl }}
-            style={hc.photo}
-            resizeMode="cover"
-          />
         ) : (
-          // fallback: sem foto
-          <View style={hc.photoPlaceholder}>
-            <Ionicons name="bed-outline" size={32} color={colors.border} />
-            <Text style={hc.photoFallbackText}>sem foto disponível</Text>
-          </View>
+          <Image
+            source={{
+              uri:
+                !photoFailed && details?.photoUrl
+                  ? details.photoUrl
+                  : getDestImage(city),
+            }}
+            style={hc.photo}
+            contentFit="cover"
+            transition={300}
+            onError={() => setPhotoFailed(true)}
+          />
         )}
 
         {/* badge de avaliação sobre a foto */}

@@ -3,7 +3,7 @@ import { differenceInDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -17,6 +17,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from "react-native-reanimated";
 import { useTrips } from "../../hooks/useTrips";
 import { colors, radius, shadow, spacing } from "../../theme";
 import { FlightEntry, HotelEntry, Trip } from "../../types";
@@ -38,25 +45,6 @@ function maskDate(val: string): string {
   if (d.length <= 4) return d;
   if (d.length <= 6) return `${d.slice(0, 4)}-${d.slice(4)}`;
   return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`;
-}
-
-// ─── tiny components ──────────────────────────────────────────────────────────
-
-function StepDots({ current }: { current: number }) {
-  return (
-    <View style={s.dotsRow}>
-      {STEPS.map((_, i) => (
-        <View
-          key={i}
-          style={[
-            s.dot,
-            i + 1 < current && s.dotDone,
-            i + 1 === current && s.dotActive,
-          ]}
-        />
-      ))}
-    </View>
-  );
 }
 
 // Animated progress indicator
@@ -185,6 +173,73 @@ function CloudTop() {
   );
 }
 
+// ─── destination themes ───────────────────────────────────────────────────────
+
+type DestTheme = { grad: [string, string, string]; emoji: string };
+
+const DEST_THEMES: Record<string, DestTheme> = {
+  // Japão
+  japão:     { grad: ["#C878A8", "#8B5A9B", "#5B3A7B"], emoji: "🌸" },
+  tóquio:    { grad: ["#C878A8", "#8B5A9B", "#5B3A7B"], emoji: "🗼" },
+  tokyo:     { grad: ["#C878A8", "#8B5A9B", "#5B3A7B"], emoji: "🗼" },
+  kyoto:     { grad: ["#D4907A", "#B06850", "#8B4A38"], emoji: "⛩️" },
+  osaka:     { grad: ["#C878A8", "#8B5A9B", "#5B3A7B"], emoji: "🏯" },
+  // Paris / França
+  paris:     { grad: ["#C9A030", "#A07828", "#785810"], emoji: "🗼" },
+  frança:    { grad: ["#3B4E9E", "#8B3A6A", "#C9A030"], emoji: "🥐" },
+  // Bali / Indonésia
+  bali:      { grad: ["#2E8B74", "#1A6B5A", "#0A4B3A"], emoji: "🌴" },
+  indonésia: { grad: ["#2E8B74", "#1A6B5A", "#0A4B3A"], emoji: "🌺" },
+  // Nova York / EUA
+  "nova york": { grad: ["#1A1A3E", "#2D3A6B", "#4A5B8B"], emoji: "🗽" },
+  "new york":  { grad: ["#1A1A3E", "#2D3A6B", "#4A5B8B"], emoji: "🗽" },
+  ny:          { grad: ["#1A1A3E", "#2D3A6B", "#4A5B8B"], emoji: "🗽" },
+  // Dubai
+  dubai:     { grad: ["#C9A030", "#8B7020", "#5B4A10"], emoji: "🏙️" },
+  // Bangkok / Tailândia
+  bangkok:   { grad: ["#9B2020", "#C04040", "#D87840"], emoji: "🏯" },
+  tailândia: { grad: ["#9B2020", "#C04040", "#D87840"], emoji: "🌺" },
+  // Roma / Itália
+  roma:      { grad: ["#C05030", "#A04028", "#784030"], emoji: "🏛️" },
+  itália:    { grad: ["#C05030", "#A04028", "#784030"], emoji: "🍕" },
+  // Barcelona / Espanha
+  barcelona: { grad: ["#C04820", "#D07030", "#E09848"], emoji: "💃" },
+  espanha:   { grad: ["#C04820", "#D07030", "#E09848"], emoji: "💃" },
+  // Lisboa / Portugal
+  lisboa:    { grad: ["#1A5A8A", "#2878B8", "#48A0D8"], emoji: "🚋" },
+  portugal:  { grad: ["#1A5A8A", "#2878B8", "#48A0D8"], emoji: "🇵🇹" },
+  // Miami
+  miami:     { grad: ["#C84EA0", "#8040C0", "#4060E0"], emoji: "🌊" },
+  // Londres
+  london:    { grad: ["#8B1A1A", "#C02020", "#6B1A3A"], emoji: "🎡" },
+  londres:   { grad: ["#8B1A1A", "#C02020", "#6B1A3A"], emoji: "🎡" },
+  // Amsterdam
+  amsterdam: { grad: ["#C02060", "#E04080", "#8B2060"], emoji: "🌷" },
+  // Cancún / México
+  cancún:    { grad: ["#0090B8", "#0070A0", "#005080"], emoji: "🏖️" },
+  méxico:    { grad: ["#188A32", "#C02828", "#C9A030"], emoji: "🌮" },
+  // Grécia / Santorini
+  grécia:    { grad: ["#1870B8", "#2890D8", "#40B0F8"], emoji: "🏛️" },
+  santorini: { grad: ["#1870B8", "#2890D8", "#40B0F8"], emoji: "🏛️" },
+  // Maldivas
+  maldivas:  { grad: ["#00A8C8", "#0088A0", "#006880"], emoji: "🏝️" },
+  // Marrocos
+  marrocos:  { grad: ["#C04820", "#D87830", "#E8A050"], emoji: "🕌" },
+  // Austrália
+  austrália: { grad: ["#8B4820", "#C07830", "#E8A858"], emoji: "🦘" },
+  sydney:    { grad: ["#1A7AAA", "#1A5A8A", "#0A3A6A"], emoji: "🦘" },
+  // Default
+  default:   { grad: ["#8B5CF6", "#C45CF0", "#FB7185"], emoji: "✈️" },
+};
+
+function getDestTheme(destinations: string[]): DestTheme {
+  const lower = destinations.join(" ").toLowerCase();
+  for (const [key, theme] of Object.entries(DEST_THEMES)) {
+    if (key !== "default" && lower.includes(key)) return theme;
+  }
+  return DEST_THEMES.default;
+}
+
 const CAT_STYLE: Record<string, { bg: string; text: string; label: string }> = {
   doc: { bg: colors.greenLight, text: colors.green, label: "docs" },
   fly: { bg: colors.purpleLight, text: colors.purple, label: "voo" },
@@ -193,6 +248,84 @@ const CAT_STYLE: Record<string, { bg: string; text: string; label: string }> = {
   misc: { bg: colors.offwhite, text: colors.muted, label: "outro" },
   visa: { bg: colors.warningLight, text: colors.warning, label: "visto" },
 };
+
+function ReviewHero({
+  name,
+  destinations,
+  depart,
+  ret,
+  nights,
+  fmtDate,
+}: {
+  name: string;
+  destinations: string[];
+  depart: string;
+  ret: string;
+  nights: number;
+  fmtDate: (d: string) => string;
+}) {
+  const theme = getDestTheme(destinations);
+  const shimmerX = useSharedValue(-200);
+
+  useEffect(() => {
+    shimmerX.value = withRepeat(
+      withTiming(420, { duration: 2400, easing: Easing.linear }),
+      -1,
+      false,
+    );
+  }, []);
+
+  const shimmerStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: shimmerX.value }],
+  }));
+
+  return (
+    <LinearGradient
+      colors={theme.grad}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={s.reviewHero}
+    >
+      {/* decorative circles */}
+      <View style={s.heroCircle1} />
+      <View style={s.heroCircle2} />
+      <View style={s.heroCircle3} />
+
+      {/* shimmer sweep */}
+      <Animated.View style={[s.heroShimmerWrap, shimmerStyle]}>
+        <LinearGradient
+          colors={[
+            "rgba(255,255,255,0)",
+            "rgba(255,255,255,0.18)",
+            "rgba(255,255,255,0)",
+          ]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={s.heroShimmer}
+        />
+      </Animated.View>
+
+      {/* emoji decoration */}
+      <Text style={s.heroEmoji}>{theme.emoji}</Text>
+
+      {/* content */}
+      <View style={{ zIndex: 3 }}>
+        <Ionicons
+          name="airplane"
+          size={13}
+          color="rgba(255,255,255,0.5)"
+          style={{ marginBottom: 6 }}
+        />
+        <Text style={s.reviewHeroName}>{name}</Text>
+        <Text style={s.reviewHeroSub}>
+          {fmtDate(depart)}
+          {ret ? ` – ${fmtDate(ret)}` : ""}
+          {nights > 0 ? `  ·  ${nights} noites` : ""}
+        </Text>
+      </View>
+    </LinearGradient>
+  );
+}
 
 // ─── main screen ──────────────────────────────────────────────────────────────
 
@@ -375,12 +508,19 @@ export default function AddTripScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.offwhite }}>
-      {/* ── HEADER fixo (fora do KAV) ── */}
       <LinearGradient
         colors={[colors.purple, colors.blush]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[s.headerGrad, { paddingTop: insets.top + 8 }]}
+        style={[
+          s.headerGrad,
+          {
+            paddingTop: insets.top + 30,
+            paddingBottom: insets.bottom + 40,
+            borderBottomLeftRadius: 20,
+            borderBottomRightRadius: 20,
+          },
+        ]}
       >
         <View style={s.headerRow}>
           <TouchableOpacity
@@ -402,9 +542,6 @@ export default function AddTripScreen() {
         <ProgressBar step={step} total={3} />
       </LinearGradient>
 
-      <CloudTop />
-
-      {/* KAV envolve só o conteúdo scrollável — header fica fixo acima */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -416,7 +553,6 @@ export default function AddTripScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ────── STEP 1: nome, destinos, datas ────── */}
           {step === 1 && (
             <>
               <SectionLabel text="sobre a viagem" />
@@ -430,7 +566,9 @@ export default function AddTripScreen() {
                   placeholderTextColor={colors.muted}
                 />
                 {errors.name && (
-                  <Text style={{ fontSize: 12, color: "#E74C3C", marginTop: 6 }}>
+                  <Text
+                    style={{ fontSize: 12, color: "#E74C3C", marginTop: 6 }}
+                  >
                     {errors.name}
                   </Text>
                 )}
@@ -488,7 +626,10 @@ export default function AddTripScreen() {
                   <View style={{ flex: 1 }}>
                     <Label text="partida" />
                     <TextInput
-                      style={[s.input, errors.depart && { borderColor: "#E74C3C" }]}
+                      style={[
+                        s.input,
+                        errors.depart && { borderColor: "#E74C3C" },
+                      ]}
                       value={depart}
                       onChangeText={(v) => setDepart(maskDate(v))}
                       placeholder="AAAA-MM-DD"
@@ -497,7 +638,9 @@ export default function AddTripScreen() {
                       maxLength={10}
                     />
                     {errors.depart && (
-                      <Text style={{ fontSize: 12, color: "#E74C3C", marginTop: 6 }}>
+                      <Text
+                        style={{ fontSize: 12, color: "#E74C3C", marginTop: 6 }}
+                      >
                         {errors.depart}
                       </Text>
                     )}
@@ -538,10 +681,8 @@ export default function AddTripScreen() {
             </>
           )}
 
-          {/* ────── STEP 2: voos + hotéis (múltiplos) ────── */}
           {step === 2 && (
             <>
-              {/* ── VOOS ── */}
               <SectionLabel text="seus voos" />
 
               {flights.map((f, i) => (
@@ -631,7 +772,6 @@ export default function AddTripScreen() {
                 </Text>
               )}
 
-              {/* ── HOTÉIS ── */}
               <SectionLabel text="seus hotéis" />
 
               {hotels.map((h, i) => (
@@ -741,19 +881,18 @@ export default function AddTripScreen() {
             </>
           )}
 
-          {/* ────── STEP 3: revisão ────── */}
           {step === 3 && (
             <>
               <SectionLabel text="resumo da viagem" />
 
-              <View style={s.reviewHero}>
-                <Text style={s.reviewHeroName}>{name}</Text>
-                <Text style={s.reviewHeroSub}>
-                  {fmtDate(depart)}
-                  {ret ? ` – ${fmtDate(ret)}` : ""}
-                  {nights > 0 ? `  ·  ${nights} noites` : ""}
-                </Text>
-              </View>
+              <ReviewHero
+                name={name}
+                destinations={dests}
+                depart={depart}
+                ret={ret}
+                nights={nights}
+                fmtDate={fmtDate}
+              />
 
               {dests.length > 0 && (
                 <>
@@ -943,13 +1082,13 @@ const s = StyleSheet.create({
     fontSize: 24,
     fontWeight: "900",
     color: colors.white,
-    fontStyle: "italic",
   },
   headerSub: {
-    fontSize: 12,
+    fontSize: 16,
     color: "rgba(255,255,255,0.8)",
-    fontWeight: "600",
+    fontStyle: "italic",
     marginTop: 2,
+    marginBottom: 6,
   },
 
   dotsRow: { flexDirection: "row", gap: 5 },
@@ -1162,19 +1301,81 @@ const s = StyleSheet.create({
   navNextText: { fontSize: 14, fontWeight: "900", color: colors.white },
 
   reviewHero: {
-    backgroundColor: colors.navy,
     borderRadius: radius.xl,
     padding: spacing.lg,
+    paddingVertical: spacing.xl,
     marginBottom: spacing.sm,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+    shadowColor: colors.purple,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  heroCircle1: {
+    position: "absolute",
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    top: -35,
+    right: -25,
+  },
+  heroCircle2: {
+    position: "absolute",
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    bottom: -20,
+    right: 55,
+  },
+  heroCircle3: {
+    position: "absolute",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    top: 12,
+    right: 80,
+  },
+  heroEmoji: {
+    position: "absolute",
+    fontSize: 64,
+    right: spacing.lg,
+    bottom: -4,
+    opacity: 0.35,
+    zIndex: 2,
+  },
+  heroShimmerWrap: {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    left: 0,
+    width: 100,
+    zIndex: 1,
+  },
+  heroShimmer: {
+    width: 100,
+    flex: 1,
   },
   reviewHeroName: {
-    fontSize: 20,
-    fontWeight: "800",
+    fontSize: 22,
+    fontWeight: "900",
     color: colors.white,
     fontStyle: "italic",
-    marginBottom: 3,
+    marginBottom: 4,
+    textShadowColor: "rgba(0,0,0,0.15)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
-  reviewHeroSub: { fontSize: 11, color: colors.muted, fontWeight: "600" },
+  reviewHeroSub: {
+    fontSize: 12,
+    color: "rgba(255,255,255,0.75)",
+    fontWeight: "600",
+  },
 
   destChipReview: {
     flexDirection: "row",

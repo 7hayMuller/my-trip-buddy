@@ -3,7 +3,13 @@ import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { useRouter } from "expo-router";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -17,7 +23,11 @@ import { useTrips } from "../hooks/useTrips";
 import { colors, radius, shadow, spacing } from "../theme";
 import { LookPin } from "../types";
 import { pinterestSearchUrl } from "../utils/pinterest";
-import { searchPlacePhotos, UnsplashPhoto, UNSPLASH_KEY } from "../utils/unsplash";
+import {
+  searchPlacePhotos,
+  UNSPLASH_KEY,
+  UnsplashPhoto,
+} from "../utils/unsplash";
 
 const defaultQuery = (trip: any) =>
   trip?.destinations?.length
@@ -29,8 +39,9 @@ const pinterestQuery = (trip: any) =>
     ? `looks ${trip.destinations[0]} viagem outfit`
     : "looks viagem outfit travel";
 
-// distribui as fotos em 2 colunas balanceando pela altura relativa (masonry)
-function splitMasonry(photos: UnsplashPhoto[]): [UnsplashPhoto[], UnsplashPhoto[]] {
+function splitMasonry(
+  photos: UnsplashPhoto[],
+): [UnsplashPhoto[], UnsplashPhoto[]] {
   const cols: [UnsplashPhoto[], UnsplashPhoto[]] = [[], []];
   const heights = [0, 0];
   for (const p of photos) {
@@ -48,12 +59,16 @@ export default function LooksPickerScreen() {
   const insets = useSafeAreaInsets();
   const { activeTrip, addLooks } = useTrips();
 
-  const [galleryPicks, setGalleryPicks] = useState<{ uri: string; id: string }[]>([]);
+  const [galleryPicks, setGalleryPicks] = useState<
+    { uri: string; id: string }[]
+  >([]);
 
   const initialQuery = defaultQuery(activeTrip);
   const [query, setQuery] = useState(initialQuery);
   const [photos, setPhotos] = useState<UnsplashPhoto[]>([]);
-  const [selected, setSelected] = useState<Map<string, UnsplashPhoto>>(new Map());
+  const [selected, setSelected] = useState<Map<string, UnsplashPhoto>>(
+    new Map(),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -61,14 +76,18 @@ export default function LooksPickerScreen() {
 
   useEffect(() => {
     if (UNSPLASH_KEY) doSearch(initialQuery);
-  }, []);
+  }, [initialQuery]);
 
   const doSearch = async (q: string) => {
     if (!q.trim()) return;
     setLoading(true);
     setError(null);
     try {
-      const results = await searchPlacePhotos(`${q.trim()} fashion outfit`, 20, "portrait");
+      const results = await searchPlacePhotos(
+        `${q.trim()} fashion outfit`,
+        20,
+        "portrait",
+      );
       setPhotos(results);
     } catch (e: any) {
       if (e?.message === "NO_KEY") setError("NO_KEY");
@@ -89,7 +108,11 @@ export default function LooksPickerScreen() {
   const togglePhoto = useCallback((photo: UnsplashPhoto) => {
     setSelected((prev) => {
       const next = new Map(prev);
-      next.has(photo.id) ? next.delete(photo.id) : next.set(photo.id, photo);
+      if (next.has(photo.id)) {
+        next.delete(photo.id);
+      } else {
+        next.set(photo.id, photo);
+      }
       return next;
     });
   }, []);
@@ -124,7 +147,10 @@ export default function LooksPickerScreen() {
   const openPinterest = () =>
     Linking.openURL(pinterestSearchUrl(pinterestQuery(activeTrip)));
 
-  const selectedPhotos = useMemo(() => Array.from(selected.values()), [selected]);
+  const selectedPhotos = useMemo(
+    () => Array.from(selected.values()),
+    [selected],
+  );
   const totalCount = galleryPicks.length + selectedPhotos.length;
   const masonryCols = useMemo(() => splitMasonry(photos), [photos]);
 
@@ -156,7 +182,11 @@ export default function LooksPickerScreen() {
         onPress={() => togglePhoto(item)}
         activeOpacity={0.88}
       >
-        <Image source={{ uri: item.urls.small }} style={s.cardImg} contentFit="cover" />
+        <Image
+          source={{ uri: item.urls.small }}
+          style={s.cardImg}
+          contentFit="cover"
+        />
         {isSel && (
           <View style={s.cardOverlay}>
             <Ionicons name="checkmark-circle" size={28} color={colors.white} />
@@ -170,27 +200,43 @@ export default function LooksPickerScreen() {
     <View style={[s.root, { paddingTop: insets.top }]}>
       {/* header */}
       <View style={s.header}>
-        <TouchableOpacity onPress={() => nav.back()} hitSlop={8} style={s.backBtn}>
+        <TouchableOpacity
+          onPress={() => nav.back()}
+          hitSlop={8}
+          style={s.backBtn}
+        >
           <Ionicons name="arrow-back" size={20} color={colors.white} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerTitle}>Looks da viagem</Text>
           {totalCount > 0 && (
             <Text style={s.headerSub}>
-              {totalCount} look{totalCount !== 1 ? "s" : ""} selecionado{totalCount !== 1 ? "s" : ""}
+              {totalCount} look{totalCount !== 1 ? "s" : ""} selecionado
+              {totalCount !== 1 ? "s" : ""}
             </Text>
           )}
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={s.content}
+        showsVerticalScrollIndicator={false}
+      >
         {/* quick actions */}
         <View style={s.quickRow}>
-          <TouchableOpacity style={s.chip} onPress={pickFromGallery} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={s.chip}
+            onPress={pickFromGallery}
+            activeOpacity={0.85}
+          >
             <Ionicons name="images-outline" size={16} color={colors.navy} />
             <Text style={s.chipText}>Galeria</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.chip} onPress={openPinterest} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={s.chip}
+            onPress={openPinterest}
+            activeOpacity={0.85}
+          >
             <Ionicons name="logo-pinterest" size={16} color="#E60023" />
             <Text style={s.chipText}>Pinterest</Text>
           </TouchableOpacity>
@@ -207,25 +253,41 @@ export default function LooksPickerScreen() {
             >
               {galleryPicks.map((p) => (
                 <View key={p.id} style={s.trayThumb}>
-                  <Image source={{ uri: p.uri }} style={s.cardImg} contentFit="cover" />
+                  <Image
+                    source={{ uri: p.uri }}
+                    style={s.cardImg}
+                    contentFit="cover"
+                  />
                   <TouchableOpacity
                     style={s.trayRemove}
                     onPress={() => removeGalleryPick(p.id)}
                     hitSlop={4}
                   >
-                    <Ionicons name="close-circle" size={18} color={colors.white} />
+                    <Ionicons
+                      name="close-circle"
+                      size={18}
+                      color={colors.white}
+                    />
                   </TouchableOpacity>
                 </View>
               ))}
               {selectedPhotos.map((photo) => (
                 <View key={photo.id} style={s.trayThumb}>
-                  <Image source={{ uri: photo.urls.thumb }} style={s.cardImg} contentFit="cover" />
+                  <Image
+                    source={{ uri: photo.urls.thumb }}
+                    style={s.cardImg}
+                    contentFit="cover"
+                  />
                   <TouchableOpacity
                     style={s.trayRemove}
                     onPress={() => togglePhoto(photo)}
                     hitSlop={4}
                   >
-                    <Ionicons name="close-circle" size={18} color={colors.white} />
+                    <Ionicons
+                      name="close-circle"
+                      size={18}
+                      color={colors.white}
+                    />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -249,8 +311,18 @@ export default function LooksPickerScreen() {
                 placeholderTextColor={colors.muted}
               />
               {query.length > 0 && (
-                <TouchableOpacity onPress={() => { setQuery(""); setPhotos([]); }} hitSlop={8}>
-                  <Ionicons name="close-circle" size={16} color={colors.muted} />
+                <TouchableOpacity
+                  onPress={() => {
+                    setQuery("");
+                    setPhotos([]);
+                  }}
+                  hitSlop={8}
+                >
+                  <Ionicons
+                    name="close-circle"
+                    size={16}
+                    color={colors.muted}
+                  />
                 </TouchableOpacity>
               )}
             </View>
@@ -260,30 +332,45 @@ export default function LooksPickerScreen() {
             )}
 
             {!loading && !error && photos.length === 0 && query.length > 0 && (
-              <Text style={s.emptyText}>Nenhuma inspiração encontrada para "{query}"</Text>
+              <Text style={s.emptyText}>
+                Nenhuma inspiração encontrada para &quot;{query}&quot;
+              </Text>
             )}
 
-            {/* masonry grid (ou skeleton durante o carregamento) */}
             <View style={s.masonryRow}>
               <View style={s.masonryCol}>
                 {loading
-                  ? SKELETON_RATIOS.filter((_, i) => i % 2 === 0).map((r, i) => (
-                      <View key={i} style={[s.skeleton, { aspectRatio: r }]} />
-                    ))
+                  ? SKELETON_RATIOS.filter((_, i) => i % 2 === 0).map(
+                      (r, i) => (
+                        <View
+                          key={i}
+                          style={[s.skeleton, { aspectRatio: r }]}
+                        />
+                      ),
+                    )
                   : masonryCols[0].map(renderMasonryCard)}
               </View>
               <View style={s.masonryCol}>
                 {loading
-                  ? SKELETON_RATIOS.filter((_, i) => i % 2 === 1).map((r, i) => (
-                      <View key={i} style={[s.skeleton, { aspectRatio: r }]} />
-                    ))
+                  ? SKELETON_RATIOS.filter((_, i) => i % 2 === 1).map(
+                      (r, i) => (
+                        <View
+                          key={i}
+                          style={[s.skeleton, { aspectRatio: r }]}
+                        />
+                      ),
+                    )
                   : masonryCols[1].map(renderMasonryCard)}
               </View>
             </View>
           </>
         ) : (
           <View style={s.infoBox}>
-            <Ionicons name="information-circle-outline" size={16} color={colors.teal2} />
+            <Ionicons
+              name="information-circle-outline"
+              size={16}
+              color={colors.teal2}
+            />
             <Text style={s.infoText}>
               Adicione ao <Text style={{ fontWeight: "900" }}>.env</Text>:{"\n"}
               EXPO_PUBLIC_UNSPLASH_ACCESS_KEY=sua_chave{"\n\n"}
@@ -330,9 +417,19 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
-  backBtn:     { padding: 2 },
-  headerTitle: { fontSize: 16, fontWeight: "800", color: colors.white, fontStyle: "italic" },
-  headerSub:   { fontSize: 10, color: "rgba(255,255,255,0.55)", fontWeight: "600", marginTop: 1 },
+  backBtn: { padding: 2 },
+  headerTitle: {
+    fontSize: 16,
+    fontWeight: "800",
+    color: colors.white,
+    fontStyle: "italic",
+  },
+  headerSub: {
+    fontSize: 10,
+    color: "rgba(255,255,255,0.55)",
+    fontWeight: "600",
+    marginTop: 1,
+  },
 
   content: { padding: spacing.lg, gap: spacing.md },
 
@@ -396,8 +493,20 @@ const s = StyleSheet.create({
     paddingVertical: 10,
   },
 
-  errorText:  { fontSize: 13, color: colors.accent, fontWeight: "600", textAlign: "center", paddingVertical: spacing.lg },
-  emptyText:  { fontSize: 13, color: colors.muted, fontWeight: "600", textAlign: "center", paddingVertical: spacing.lg },
+  errorText: {
+    fontSize: 13,
+    color: colors.accent,
+    fontWeight: "600",
+    textAlign: "center",
+    paddingVertical: spacing.lg,
+  },
+  emptyText: {
+    fontSize: 13,
+    color: colors.muted,
+    fontWeight: "600",
+    textAlign: "center",
+    paddingVertical: spacing.lg,
+  },
 
   infoBox: {
     flexDirection: "row",
@@ -407,7 +516,13 @@ const s = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.md,
   },
-  infoText: { fontSize: 12, color: colors.teal2, fontWeight: "600", flex: 1, lineHeight: 19 },
+  infoText: {
+    fontSize: 12,
+    color: colors.teal2,
+    fontWeight: "600",
+    flex: 1,
+    lineHeight: 19,
+  },
 
   masonryRow: { flexDirection: "row", gap: spacing.sm },
   masonryCol: { flex: 1, gap: spacing.sm },
@@ -441,7 +556,7 @@ const s = StyleSheet.create({
     paddingTop: spacing.md,
     ...shadow.md,
   },
-  saveCount:   { fontSize: 13, fontWeight: "700", color: colors.navy },
+  saveCount: { fontSize: 13, fontWeight: "700", color: colors.navy },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",

@@ -16,8 +16,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import HotelCard from "../../components/HotelCard";
 import { EmptyStateTrips } from "../../components/EmptyStateTrips";
 import PlaneRoute from "../../components/PlaneRoute";
+import { WorldMapPin } from "../../components/WorldMapPin";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useTrips } from "../../hooks/useTrips";
 import { colors, getTripImage, radius, shadow, spacing } from "../../theme";
@@ -185,6 +187,28 @@ export default function HomeScreen() {
         activeTrip.origin ?? "Brasil",
       )
     : [];
+
+  const hotelDates = (
+    index: number,
+    total: number,
+  ): { checkIn: string; checkOut: string } => {
+    if (!activeTrip) return { checkIn: "", checkOut: "" };
+    if (total <= 1) return { checkIn: activeTrip.depart, checkOut: activeTrip.ret };
+    const dep = new Date(activeTrip.depart + "T00:00:00");
+    const ret = new Date(activeTrip.ret + "T00:00:00");
+    const totalDays = differenceInDays(ret, dep);
+    const perHotel = Math.floor(totalDays / total);
+    const checkInDate = new Date(dep);
+    checkInDate.setDate(checkInDate.getDate() + index * perHotel);
+    const checkOutDate = new Date(checkInDate);
+    if (index === total - 1) {
+      checkOutDate.setTime(ret.getTime());
+    } else {
+      checkOutDate.setDate(checkOutDate.getDate() + perHotel);
+    }
+    const fmt = (d: Date) => d.toISOString().split("T")[0];
+    return { checkIn: fmt(checkInDate), checkOut: fmt(checkOutDate) };
+  };
 
   const handleAddItem = async () => {
     const text = newItemText.trim();
@@ -360,6 +384,35 @@ export default function HomeScreen() {
             />
           </LinearGradient>
         </View>
+
+        {activeTrip && (activeTrip.destinations?.length ?? 0) > 0 && (
+          <>
+            <Text style={s.secLabel}>destino no mapa</Text>
+            <WorldMapPin destinations={activeTrip.destinations ?? []} />
+          </>
+        )}
+
+        {activeTrip &&
+          (activeTrip.hotels ?? []).filter((h) => h.name.trim()).length > 0 && (
+            <>
+              <Text style={s.secLabel}>hospedagens</Text>
+              {(activeTrip.hotels ?? [])
+                .filter((h) => h.name.trim())
+                .map((hotel, i, arr) => {
+                  const { checkIn, checkOut } = hotelDates(i, arr.length);
+                  return (
+                    <HotelCard
+                      key={i}
+                      hotelName={hotel.name}
+                      city={hotel.dest || activeTrip.destinations?.[0] || ""}
+                      checkIn={checkIn}
+                      checkOut={checkOut}
+                      confirmationCode={hotel.conf || undefined}
+                    />
+                  );
+                })}
+            </>
+          )}
 
         {visaWarnings.length > 0 && (
           <View style={s.visaCard}>
@@ -601,7 +654,7 @@ export default function HomeScreen() {
           </>
         )}
 
-        {activeTrip && (
+        {/* {activeTrip && (
           <LinearGradient
             colors={[colors.teal, colors.sage]}
             start={{ x: 0, y: 0 }}
@@ -622,13 +675,14 @@ export default function HomeScreen() {
               </View>
             </View>
           </LinearGradient>
-        )}
+        )} */}
 
-        {activeTrip && (activeTrip.flightConf || activeTrip.hotelConf) && (
+        {/* Ternário explícito — evita `""` como text node em View no web */}
+        {activeTrip?.flightConf || activeTrip?.hotelConf ? (
           <>
             <Text style={s.secLabel}>confirmações</Text>
             <View style={s.confRow}>
-              {activeTrip.flightConf && (
+              {activeTrip.flightConf ? (
                 <LinearGradient
                   colors={["rgba(123,104,182,0.08)", "rgba(123,104,182,0.02)"]}
                   start={{ x: 0, y: 0 }}
@@ -650,8 +704,8 @@ export default function HomeScreen() {
                     <Text style={s.confSub}>confirmado</Text>
                   </View>
                 </LinearGradient>
-              )}
-              {activeTrip.hotelConf && (
+              ) : null}
+              {activeTrip.hotelConf ? (
                 <LinearGradient
                   colors={["rgba(107,169,160,0.08)", "rgba(107,169,160,0.02)"]}
                   start={{ x: 0, y: 0 }}
@@ -671,14 +725,14 @@ export default function HomeScreen() {
                       {activeTrip.hotelConf}
                     </Text>
                     <Text style={s.confSub}>
-                      {activeTrip.destinations?.[0]}
+                      {activeTrip.destinations?.[0] ?? ""}
                     </Text>
                   </View>
                 </LinearGradient>
-              )}
+              ) : null}
             </View>
           </>
-        )}
+        ) : null}
 
         <View style={{ height: 100 }} />
       </Animated.ScrollView>
@@ -686,7 +740,7 @@ export default function HomeScreen() {
   );
 }
 
-const HERO_HEIGHT = 280;
+const HERO_HEIGHT = 300;
 
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.offwhite },
@@ -696,9 +750,6 @@ const s = StyleSheet.create({
     height: HERO_HEIGHT,
     backgroundColor: colors.navyDeep,
     overflow: "visible",
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.lg,
-    marginBottom: -spacing.lg,
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,
     ...shadow.md,
@@ -770,6 +821,7 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: spacing.sm,
     marginTop: spacing.sm,
+    marginBottom: spacing.md,
   },
   cdUnit: { flex: 1, alignItems: "center" },
   cdNum: {
@@ -838,7 +890,7 @@ const s = StyleSheet.create({
     marginRight: spacing.sm,
     ...shadow.sm,
   },
-  chipActive: { backgroundColor: colors.navy, borderColor: colors.navy },
+  chipActive: { backgroundColor: colors.blush, borderColor: colors.blush },
   chipText: {
     fontSize: 11,
     fontWeight: "700",

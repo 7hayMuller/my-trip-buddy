@@ -1,20 +1,20 @@
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
+  Animated,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
-  Animated,
-  TextInput,
-  Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../hooks/useAuth";
-import { colors, spacing, radius } from "../theme";
+import { colors, radius, spacing } from "../theme";
 
 export default function LoginScreen() {
   const nav = useRouter();
@@ -26,14 +26,12 @@ export default function LoginScreen() {
 
   const scaleAnim = React.useRef(new Animated.Value(0.8)).current;
 
-  // Redirecionar para home se já está logado
   useEffect(() => {
     if (isSignedIn) {
       nav.replace("/(tabs)");
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, nav]);
 
-  // Animação de entrada
   useEffect(() => {
     Animated.spring(scaleAnim, {
       toValue: 1,
@@ -41,7 +39,7 @@ export default function LoginScreen() {
       bounciness: 8,
       useNativeDriver: true,
     }).start();
-  }, []);
+  }, [scaleAnim]);
 
   const handleLogin = async () => {
     if (!email.trim()) {
@@ -63,7 +61,7 @@ export default function LoginScreen() {
               setSent(false);
             },
           },
-        ]
+        ],
       );
     } else {
       Alert.alert("Erro", result.error || "Erro ao enviar link");
@@ -81,7 +79,6 @@ export default function LoginScreen() {
       setCode("");
       setSent(false);
       setEmail("");
-      // isSignedIn vai mudar e redirecionar automaticamente
     } else {
       Alert.alert("Erro", result.error || "Código inválido");
     }
@@ -95,7 +92,6 @@ export default function LoginScreen() {
       />
 
       <View style={[s.content, { paddingTop: insets.top }]}>
-        {/* Logo/Header */}
         <View style={s.header}>
           <View style={s.logoCircle}>
             <Ionicons name="airplane" size={50} color={colors.white} />
@@ -104,7 +100,6 @@ export default function LoginScreen() {
           <Text style={s.subtitle}>Organize suas viagens com estilo</Text>
         </View>
 
-        {/* Features */}
         <View style={s.features}>
           <FeatureItem
             icon="checkmark-circle"
@@ -124,7 +119,6 @@ export default function LoginScreen() {
         </View>
       </View>
 
-      {/* Login Section */}
       <View style={[s.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
         {!sent ? (
           <>
@@ -221,7 +215,13 @@ export default function LoginScreen() {
               </LinearGradient>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => { setSent(false); setEmail(""); setCode(""); }}>
+            <TouchableOpacity
+              onPress={() => {
+                setSent(false);
+                setEmail("");
+                setCode("");
+              }}
+            >
               <Text style={s.changeEmail}>Usar outro email</Text>
             </TouchableOpacity>
           </>
