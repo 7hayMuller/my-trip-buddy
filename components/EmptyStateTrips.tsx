@@ -77,7 +77,7 @@ export function EmptyStateTrips() {
   return (
     <View style={s.container}>
       <Video
-        source={require("../assets/videos/sky.mp4")}
+        source={require("../assets/videos/sky_loop.mp4")}
         rate={1.0}
         volume={0}
         isMuted={true}
@@ -98,10 +98,12 @@ export function EmptyStateTrips() {
       />
       <View style={s.background}>
         <View style={s.content}>
-          <Text style={s.heading}>Vem aí a viagem dos seus sonhos!</Text>
+          <Text style={s.heading}>
+            Toda grande viagem começa com essa vista
+          </Text>
 
           <Text style={s.subheading}>
-            Organize uma viagem incrível e comece a planejar cada detalhe
+            Organize cada detalhe e prepare-se para decolar.
           </Text>
 
           <View style={s.featuresList}>

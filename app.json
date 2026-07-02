@@ -12,6 +12,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.thayna.mytripbuddy",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -27,6 +28,8 @@
     },
     "plugins": [
       "expo-router",
+      "./plugins/withAsyncStorageRepo",
+      "@react-native-google-signin/google-signin",
       [
         "expo-splash-screen",
         {
@@ -38,7 +41,9 @@
             "backgroundColor": "#000000"
           }
         }
-      ]
+      ],
+      "expo-font",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true,

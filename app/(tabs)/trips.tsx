@@ -15,8 +15,6 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -24,6 +22,8 @@ import Animated, {
   withRepeat,
   withTiming,
 } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Path } from "react-native-svg";
 import { useTrips } from "../../hooks/useTrips";
 import { colors, radius, shadow, spacing } from "../../theme";
 import { FlightEntry, HotelEntry, Trip } from "../../types";
@@ -179,57 +179,57 @@ type DestTheme = { grad: [string, string, string]; emoji: string };
 
 const DEST_THEMES: Record<string, DestTheme> = {
   // Japão
-  japão:     { grad: ["#C878A8", "#8B5A9B", "#5B3A7B"], emoji: "🌸" },
-  tóquio:    { grad: ["#C878A8", "#8B5A9B", "#5B3A7B"], emoji: "🗼" },
-  tokyo:     { grad: ["#C878A8", "#8B5A9B", "#5B3A7B"], emoji: "🗼" },
-  kyoto:     { grad: ["#D4907A", "#B06850", "#8B4A38"], emoji: "⛩️" },
-  osaka:     { grad: ["#C878A8", "#8B5A9B", "#5B3A7B"], emoji: "🏯" },
+  japão: { grad: ["#C878A8", "#8B5A9B", "#5B3A7B"], emoji: "🌸" },
+  tóquio: { grad: ["#C878A8", "#8B5A9B", "#5B3A7B"], emoji: "🗼" },
+  tokyo: { grad: ["#C878A8", "#8B5A9B", "#5B3A7B"], emoji: "🗼" },
+  kyoto: { grad: ["#D4907A", "#B06850", "#8B4A38"], emoji: "⛩️" },
+  osaka: { grad: ["#C878A8", "#8B5A9B", "#5B3A7B"], emoji: "🏯" },
   // Paris / França
-  paris:     { grad: ["#C9A030", "#A07828", "#785810"], emoji: "🗼" },
-  frança:    { grad: ["#3B4E9E", "#8B3A6A", "#C9A030"], emoji: "🥐" },
+  paris: { grad: ["#C9A030", "#A07828", "#785810"], emoji: "🗼" },
+  frança: { grad: ["#3B4E9E", "#8B3A6A", "#C9A030"], emoji: "🥐" },
   // Bali / Indonésia
-  bali:      { grad: ["#2E8B74", "#1A6B5A", "#0A4B3A"], emoji: "🌴" },
+  bali: { grad: ["#2E8B74", "#1A6B5A", "#0A4B3A"], emoji: "🌴" },
   indonésia: { grad: ["#2E8B74", "#1A6B5A", "#0A4B3A"], emoji: "🌺" },
   // Nova York / EUA
   "nova york": { grad: ["#1A1A3E", "#2D3A6B", "#4A5B8B"], emoji: "🗽" },
-  "new york":  { grad: ["#1A1A3E", "#2D3A6B", "#4A5B8B"], emoji: "🗽" },
-  ny:          { grad: ["#1A1A3E", "#2D3A6B", "#4A5B8B"], emoji: "🗽" },
+  "new york": { grad: ["#1A1A3E", "#2D3A6B", "#4A5B8B"], emoji: "🗽" },
+  ny: { grad: ["#1A1A3E", "#2D3A6B", "#4A5B8B"], emoji: "🗽" },
   // Dubai
-  dubai:     { grad: ["#C9A030", "#8B7020", "#5B4A10"], emoji: "🏙️" },
+  dubai: { grad: ["#C9A030", "#8B7020", "#5B4A10"], emoji: "🏙️" },
   // Bangkok / Tailândia
-  bangkok:   { grad: ["#9B2020", "#C04040", "#D87840"], emoji: "🏯" },
+  bangkok: { grad: ["#9B2020", "#C04040", "#D87840"], emoji: "🏯" },
   tailândia: { grad: ["#9B2020", "#C04040", "#D87840"], emoji: "🌺" },
   // Roma / Itália
-  roma:      { grad: ["#C05030", "#A04028", "#784030"], emoji: "🏛️" },
-  itália:    { grad: ["#C05030", "#A04028", "#784030"], emoji: "🍕" },
+  roma: { grad: ["#C05030", "#A04028", "#784030"], emoji: "🏛️" },
+  itália: { grad: ["#C05030", "#A04028", "#784030"], emoji: "🍕" },
   // Barcelona / Espanha
   barcelona: { grad: ["#C04820", "#D07030", "#E09848"], emoji: "💃" },
-  espanha:   { grad: ["#C04820", "#D07030", "#E09848"], emoji: "💃" },
+  espanha: { grad: ["#C04820", "#D07030", "#E09848"], emoji: "💃" },
   // Lisboa / Portugal
-  lisboa:    { grad: ["#1A5A8A", "#2878B8", "#48A0D8"], emoji: "🚋" },
-  portugal:  { grad: ["#1A5A8A", "#2878B8", "#48A0D8"], emoji: "🇵🇹" },
+  lisboa: { grad: ["#1A5A8A", "#2878B8", "#48A0D8"], emoji: "🚋" },
+  portugal: { grad: ["#1A5A8A", "#2878B8", "#48A0D8"], emoji: "🇵🇹" },
   // Miami
-  miami:     { grad: ["#C84EA0", "#8040C0", "#4060E0"], emoji: "🌊" },
+  miami: { grad: ["#C84EA0", "#8040C0", "#4060E0"], emoji: "🌊" },
   // Londres
-  london:    { grad: ["#8B1A1A", "#C02020", "#6B1A3A"], emoji: "🎡" },
-  londres:   { grad: ["#8B1A1A", "#C02020", "#6B1A3A"], emoji: "🎡" },
+  london: { grad: ["#8B1A1A", "#C02020", "#6B1A3A"], emoji: "🎡" },
+  londres: { grad: ["#8B1A1A", "#C02020", "#6B1A3A"], emoji: "🎡" },
   // Amsterdam
   amsterdam: { grad: ["#C02060", "#E04080", "#8B2060"], emoji: "🌷" },
   // Cancún / México
-  cancún:    { grad: ["#0090B8", "#0070A0", "#005080"], emoji: "🏖️" },
-  méxico:    { grad: ["#188A32", "#C02828", "#C9A030"], emoji: "🌮" },
+  cancún: { grad: ["#0090B8", "#0070A0", "#005080"], emoji: "🏖️" },
+  méxico: { grad: ["#188A32", "#C02828", "#C9A030"], emoji: "🌮" },
   // Grécia / Santorini
-  grécia:    { grad: ["#1870B8", "#2890D8", "#40B0F8"], emoji: "🏛️" },
+  grécia: { grad: ["#1870B8", "#2890D8", "#40B0F8"], emoji: "🏛️" },
   santorini: { grad: ["#1870B8", "#2890D8", "#40B0F8"], emoji: "🏛️" },
   // Maldivas
-  maldivas:  { grad: ["#00A8C8", "#0088A0", "#006880"], emoji: "🏝️" },
+  maldivas: { grad: ["#00A8C8", "#0088A0", "#006880"], emoji: "🏝️" },
   // Marrocos
-  marrocos:  { grad: ["#C04820", "#D87830", "#E8A050"], emoji: "🕌" },
+  marrocos: { grad: ["#C04820", "#D87830", "#E8A050"], emoji: "🕌" },
   // Austrália
   austrália: { grad: ["#8B4820", "#C07830", "#E8A858"], emoji: "🦘" },
-  sydney:    { grad: ["#1A7AAA", "#1A5A8A", "#0A3A6A"], emoji: "🦘" },
+  sydney: { grad: ["#1A7AAA", "#1A5A8A", "#0A3A6A"], emoji: "🦘" },
   // Default
-  default:   { grad: ["#8B5CF6", "#C45CF0", "#FB7185"], emoji: "✈️" },
+  default: { grad: ["#8B5CF6", "#C45CF0", "#FB7185"], emoji: "✈️" },
 };
 
 function getDestTheme(destinations: string[]): DestTheme {
@@ -516,7 +516,7 @@ export default function AddTripScreen() {
           s.headerGrad,
           {
             paddingTop: insets.top + 30,
-            paddingBottom: insets.bottom + 40,
+            paddingBottom: insets.bottom,
             borderBottomLeftRadius: 20,
             borderBottomRightRadius: 20,
           },
@@ -1061,13 +1061,11 @@ export default function AddTripScreen() {
 const s = StyleSheet.create({
   headerGrad: {
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
   },
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    marginBottom: spacing.md,
   },
   backBtn: {
     width: 40,

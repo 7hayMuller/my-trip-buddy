@@ -1,8 +1,10 @@
+import { useTrips } from "@/hooks/useTrips";
 import { colors } from "@/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
 export default function TabLayout() {
+  const { activeTrips } = useTrips();
   return (
     <Tabs
       screenOptions={{
@@ -14,6 +16,7 @@ export default function TabLayout() {
           borderTopColor: colors.offwhite,
           height: 100,
           paddingBottom: 5,
+          //tdisplay: activeTrips ? "flex" : "none",
         },
       }}
     >

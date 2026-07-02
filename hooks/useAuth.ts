@@ -1,5 +1,6 @@
+import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { useEffect, useState } from "react";
-import * as Linking from "expo-linking";
+import { Platform } from "react-native";
 import { supabase } from "../utils/supabase";
 
 export function useAuth() {
@@ -7,26 +8,19 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? "",
+      scopes: ["email", "profile"],
+    });
+
     checkUser();
 
-    const { data: { subscription } } = supabase?.auth.onAuthStateChange?.((event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-      } else {
-        setUser(null);
-      }
+    const { data: { subscription } } = supabase?.auth.onAuthStateChange?.((_, session) => {
+      setUser(session?.user ?? null);
     }) ?? { data: { subscription: null } };
-
-    // Ouvir deep links para redirecionar após clique no email
-    const subscription2 = Linking.addEventListener("url", ({ url }) => {
-      console.log("🔗 Deep link chegou:", url);
-      // Tenta recuperar sessão quando deep link chegar
-      checkUser();
-    });
 
     return () => {
       subscription?.unsubscribe?.();
-      subscription2.remove();
     };
   }, []);
 
@@ -34,48 +28,57 @@ export function useAuth() {
     try {
       if (supabase) {
         const { data: { session }, error } = await supabase.auth.getSession();
-        if (session?.user && !error) {
-          setUser(session.user);
-        }
+        if (session?.user && !error) setUser(session.user);
       }
-    } catch (error) {
-      console.error("Erro ao verificar usuário:", error);
-    } finally {
-      setLoading(false);
-    }
+    } catch {}
+    finally { setLoading(false); }
   }
 
   async function loginWithEmail(email: string) {
     if (!supabase) return { error: "Supabase não configurado" };
-
     try {
-      console.log("📧 Enviando código para:", email);
-
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          shouldCreateUser: true,
-        },
+        options: { shouldCreateUser: true },
       });
-
       if (error) throw error;
       return { success: true };
-    } catch (error: any) {
-      console.error("Erro ao enviar código:", error);
-      return { error: error.message || "Erro ao enviar código" };
+    } catch (e: any) {
+      return { error: e.message || "Erro ao enviar código" };
     }
   }
 
   async function verifyCode(email: string, token: string) {
     if (!supabase) return { error: "Supabase não configurado" };
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+      if (error) throw error;
+      if (data?.session?.user) {
+        setUser(data.session.user);
+        return { success: true };
+      }
+      return { error: "Código inválido" };
+    } catch (e: any) {
+      return { error: e.message || "Código inválido" };
+    }
+  }
+
+  async function loginWithGoogle(): Promise<{ success?: boolean; error?: string }> {
+    if (!supabase) return { error: "Supabase não configurado" };
 
     try {
-      console.log("🔐 Verificando código:", token);
+      if (Platform.OS === "android") {
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      }
 
-      const { data, error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: "email",
+      const response = await GoogleSignin.signIn();
+      const idToken = response.data?.idToken;
+
+      if (!idToken) return { error: "Não foi possível obter o token do Google" };
+
+      const { data, error } = await supabase.auth.signInWithIdToken({
+        provider: "google",
+        token: idToken,
       });
 
       if (error) throw error;
@@ -83,22 +86,17 @@ export function useAuth() {
         setUser(data.session.user);
         return { success: true };
       }
-      return { error: "Código inválido" };
-    } catch (error: any) {
-      console.error("Erro ao verificar código:", error);
-      return { error: error.message || "Código inválido" };
+      return { error: "Erro ao criar sessão" };
+    } catch (e: any) {
+      return { error: e.message || "Erro ao fazer login com Google" };
     }
   }
 
   async function logout() {
     try {
-      if (supabase) {
-        await supabase.auth.signOut();
-      }
+      if (supabase) await supabase.auth.signOut();
       setUser(null);
-    } catch (error) {
-      console.error("Erro ao fazer logout:", error);
-    }
+    } catch {}
   }
 
   return {
@@ -106,6 +104,7 @@ export function useAuth() {
     loading,
     loginWithEmail,
     verifyCode,
+    loginWithGoogle,
     logout,
     isSignedIn: !!user,
   };

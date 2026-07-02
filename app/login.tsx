@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { ResizeMode, Video } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -6,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -13,13 +15,16 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import MyTripBuddyLogo from "../components/MyTripBuddyLogo";
 import { useAuth } from "../hooks/useAuth";
 import { colors, radius, spacing } from "../theme";
 
 export default function LoginScreen() {
   const nav = useRouter();
   const insets = useSafeAreaInsets();
-  const { loginWithEmail, verifyCode, loading, isSignedIn } = useAuth();
+  const { loginWithEmail, verifyCode, loginWithGoogle, loading, isSignedIn } =
+    useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
@@ -40,6 +45,13 @@ export default function LoginScreen() {
       useNativeDriver: true,
     }).start();
   }, [scaleAnim]);
+
+  const handleGoogleLogin = async () => {
+    setGoogleLoading(true);
+    const result = await loginWithGoogle();
+    setGoogleLoading(false);
+    if (result.error) Alert.alert("Erro", result.error);
+  };
 
   const handleLogin = async () => {
     if (!email.trim()) {
@@ -86,21 +98,34 @@ export default function LoginScreen() {
 
   return (
     <View style={s.root}>
+      <Video
+        source={require("../assets/videos/boarding_loop.mp4")}
+        rate={1.0}
+        volume={0}
+        isMuted={true}
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        style={StyleSheet.absoluteFill}
+      />
       <LinearGradient
-        colors={[colors.offwhite, colors.cream]}
+        colors={[
+          "rgba(17,30,53,0.3)",
+          "rgba(17,30,53,0.5)",
+          "rgba(17,30,53,0.75)",
+        ]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
 
       <View style={[s.content, { paddingTop: insets.top }]}>
         <View style={s.header}>
-          <View style={s.logoCircle}>
-            <Ionicons name="airplane" size={50} color={colors.white} />
-          </View>
-          <Text style={s.title}>My Trip Buddy</Text>
+          <MyTripBuddyLogo size={280} ink={colors.white} accent={colors.blush} />
           <Text style={s.subtitle}>Organize suas viagens com estilo</Text>
         </View>
 
-        <View style={s.features}>
+        {/* <View style={s.features}>
           <FeatureItem
             icon="checkmark-circle"
             title="Checklist Inteligente"
@@ -116,12 +141,37 @@ export default function LoginScreen() {
             title="Mapa de Destinos"
             description="Explore lugares para visitar"
           />
-        </View>
+        </View>*/}
       </View>
 
       <View style={[s.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
         {!sent ? (
           <>
+            {Platform.OS !== "web" && (
+              <>
+                <TouchableOpacity
+                  style={[s.googleBtn, googleLoading && s.buttonDisabled]}
+                  onPress={handleGoogleLogin}
+                  disabled={googleLoading || loading}
+                  activeOpacity={0.85}
+                >
+                  {googleLoading ? (
+                    <ActivityIndicator color={colors.white} size="small" />
+                  ) : (
+                    <>
+                      <Text style={s.googleBtnText}>Continuar com Google</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <View style={s.orRow}>
+                  <View style={s.orLine} />
+                  <Text style={s.orText}>ou</Text>
+                  <View style={s.orLine} />
+                </View>
+              </>
+            )}
+
             <View>
               <Text style={s.inputLabel}>Email</Text>
               <TextInput
@@ -146,7 +196,7 @@ export default function LoginScreen() {
                 colors={
                   loading || !email.trim()
                     ? [colors.border, colors.border]
-                    : [colors.blush, "#D4697B"]
+                    : [colors.gradStart, colors.gradMid, colors.gradEnd]
                 }
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
@@ -287,14 +337,14 @@ const s = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "900",
-    color: colors.navy,
+    color: colors.white,
     marginBottom: spacing.sm,
     textAlign: "center",
   },
 
   subtitle: {
     fontSize: 15,
-    color: colors.muted,
+    color: "rgba(255,255,255,0.85)",
     textAlign: "center",
     fontWeight: "600",
   },
@@ -354,7 +404,7 @@ const s = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: colors.navy,
+    color: colors.white,
     marginBottom: spacing.sm,
   },
 
@@ -373,9 +423,9 @@ const s = StyleSheet.create({
   button: {
     borderRadius: radius.lg,
     overflow: "hidden",
-    shadowColor: colors.blush,
+    shadowColor: colors.gradMid,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
@@ -402,14 +452,14 @@ const s = StyleSheet.create({
 
   terms: {
     fontSize: 11,
-    color: colors.muted,
+    color: "rgba(255,255,255,0.75)",
     textAlign: "center",
     fontWeight: "500",
     lineHeight: 16,
   },
 
   termsLink: {
-    color: colors.navy,
+    color: colors.white,
     fontWeight: "700",
     textDecorationLine: "underline",
   },
@@ -417,14 +467,14 @@ const s = StyleSheet.create({
   sentTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: colors.navy,
+    color: colors.white,
     textAlign: "center",
     marginBottom: spacing.sm,
   },
 
   sentSubtitle: {
     fontSize: 14,
-    color: colors.muted,
+    color: "rgba(255,255,255,0.85)",
     textAlign: "center",
     marginBottom: spacing.lg,
     fontWeight: "500",
@@ -437,5 +487,58 @@ const s = StyleSheet.create({
     fontWeight: "700",
     marginTop: spacing.md,
     textDecorationLine: "underline",
+  },
+
+  googleBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.md,
+    borderWidth: 1.5,
+    borderColor: "#EA4335",
+    borderRadius: radius.lg,
+    paddingVertical: 13,
+    backgroundColor: "#EA4335",
+    shadowColor: "#EA4335",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  googleLogo: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  googleLogoText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: "#EA4335",
+  },
+  googleBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.white,
+  },
+
+  orRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  orLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.3)",
+  },
+  orText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "rgba(255,255,255,0.75)",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
 });
