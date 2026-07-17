@@ -46,7 +46,6 @@ export default function RootLayout() {
             <>
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="pinterest-picker" />
-              <Stack.Screen name="places-picker" />
               <Stack.Screen name="modal" options={{ presentation: "modal" }} />
             </>
           )}

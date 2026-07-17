@@ -83,7 +83,6 @@ export async function saveChecks(checks) {
 }
 
 const LOOKS_KEY  = '@wanderlust_looks';
-const PLACES_KEY = '@wanderlust_places';
 
 export async function loadLooks() {
   try {
@@ -94,15 +93,4 @@ export async function loadLooks() {
 
 export async function saveLooks(looks) {
   try { await AsyncStorage.setItem(LOOKS_KEY, JSON.stringify(looks)); } catch {}
-}
-
-export async function loadPlaces() {
-  try {
-    const raw = await AsyncStorage.getItem(PLACES_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
-
-export async function savePlaces(places) {
-  try { await AsyncStorage.setItem(PLACES_KEY, JSON.stringify(places)); } catch {}
 }

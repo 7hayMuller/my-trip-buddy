@@ -13,6 +13,10 @@ export interface Trip {
   id: string;
   name: string;
   destinations: string[];
+  // Coordenadas (e país, quando disponível) por destino, preenchidas ao
+  // pinar um destino pela busca do mapa. Destinos sem entrada aqui caem no
+  // lookup aproximado por nome em utils/geo.ts, sem país conhecido.
+  destinationCoords?: Record<string, { lat: number; lon: number; country?: string }>;
   coverImage?: string;
   depart: string; // YYYY-MM-DD
   ret: string;    // YYYY-MM-DD
@@ -73,12 +77,4 @@ export interface LookPin {
   tripId: string;
   imageUrl: string;
   title?: string;
-}
-
-export interface PlacePin {
-  id: string;
-  tripId: string;
-  name: string;
-  imageUrl: string;
-  thumbUrl: string;
 }

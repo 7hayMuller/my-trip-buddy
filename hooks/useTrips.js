@@ -1,16 +1,23 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { createDefaultChecks, getDefaultCheckItems, loadChecks, loadLooks, loadPlaces, loadTrips, saveChecks, saveLooks, savePlaces, saveTrips } from "../utils/storage";
+import { createDefaultChecks, getDefaultCheckItems, loadChecks, loadLooks, loadTrips, saveChecks, saveLooks, saveTrips } from "../utils/storage";
 import { getDeviceId, isConfigured, loadFromCloud, saveToCloud } from "../utils/supabase";
 import { getVisaWarnings } from "../utils/visa";
 
 const TripContext = createContext();
 
+function findNearestTrip(trips) {
+  if (trips.length === 0) return null;
+  const now = new Date();
+  const upcoming = trips
+    .filter((t) => new Date(t.ret + 'T23:59:59') >= now)
+    .sort((a, b) => new Date(a.depart) - new Date(b.depart));
+  return upcoming[0] ?? trips[trips.length - 1];
+}
+
 export function TripProvider({ children }) {
   const [trips, setTrips] = useState([]);
-  const [activeIndex, setActiveIndex] = useState(0);
   const [checks, setChecks] = useState([]);
   const [looks, setLooks] = useState([]);
-  const [places, setPlaces] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [synced, setSynced] = useState(false);
   const deviceIdRef = React.useRef(null);
@@ -20,7 +27,6 @@ export function TripProvider({ children }) {
       // 1. Carrega dados locais primeiro (rápido)
       let t  = await loadTrips();
       let lk = await loadLooks();
-      let pl = await loadPlaces();
       let c  = await loadChecks();
 
       // 2. Seed checks para trips sem checklist
@@ -41,7 +47,6 @@ export function TripProvider({ children }) {
       setTrips(t);
       setChecks(c);
       setLooks(lk);
-      setPlaces(pl);
       setLoaded(true);
 
       // 3. Sync com Supabase em background (se configurado)
@@ -54,42 +59,37 @@ export function TripProvider({ children }) {
           setTrips(cloud.trips);
           setChecks(cloud.checks ?? []);
           setLooks(cloud.looks  ?? []);
-          setPlaces(cloud.places ?? []);
           await saveTrips(cloud.trips);
           await saveChecks(cloud.checks ?? []);
           await saveLooks(cloud.looks   ?? []);
-          await savePlaces(cloud.places  ?? []);
         } else if (t.length > 0) {
           // Nuvem vazia mas tem dados locais: sobe para nuvem
-          await saveToCloud(deviceId, { trips: t, checks: c, looks: lk, places: pl });
+          await saveToCloud(deviceId, { trips: t, checks: c, looks: lk });
         }
         setSynced(true);
       }
     })();
   }, []);
 
-  const activeTrip = trips[activeIndex] || null;
+  const activeTrip = findNearestTrip(trips);
 
   // Dispara sync para nuvem após qualquer mudança (fire-and-forget)
-  const pushToCloud = async (nextTrips, nextChecks, nextLooks, nextPlaces) => {
+  const pushToCloud = async (nextTrips, nextChecks, nextLooks) => {
     if (!isConfigured || !deviceIdRef.current) return;
     await saveToCloud(deviceIdRef.current, {
       trips:  nextTrips  ?? trips,
       checks: nextChecks ?? checks,
       looks:  nextLooks  ?? looks,
-      places: nextPlaces ?? places,
     });
   };
   const activeChecks = checks.filter((c) => c.tripId === activeTrip?.id);
   const activeLooks   = looks.filter((l) => l.tripId === activeTrip?.id);
-  const activePlaces  = places.filter((p) => p.tripId === activeTrip?.id);
 
   const addTrip = async (trip) => {
     const id = Date.now().toString();
     const newTrip = { ...trip, id };
     const next = [...trips, newTrip];
     setTrips(next);
-    setActiveIndex(next.length - 1);
     await saveTrips(next);
 
     const tripChecks = createDefaultChecks(id, trip);
@@ -99,32 +99,31 @@ export function TripProvider({ children }) {
     const nextChecks = [...checks, ...tripChecks];
     setChecks(nextChecks);
     await saveChecks(nextChecks);
-    pushToCloud(next, nextChecks, null, null);
+    pushToCloud(next, nextChecks, null);
   };
 
   const updateTrip = async (id, data) => {
     const next = trips.map((t) => (t.id === id ? { ...t, ...data } : t));
     setTrips(next);
     await saveTrips(next);
-    pushToCloud(next, null, null, null);
+    pushToCloud(next, null, null);
   };
 
   const deleteTrip = async (id) => {
     const next = trips.filter((t) => t.id !== id);
     setTrips(next);
-    setActiveIndex(Math.min(activeIndex, next.length - 1));
     await saveTrips(next);
     const nextChecks = checks.filter((c) => c.tripId !== id);
     setChecks(nextChecks);
     await saveChecks(nextChecks);
-    pushToCloud(next, nextChecks, null, null);
+    pushToCloud(next, nextChecks, null);
   };
 
   const toggleCheck = async (checkId) => {
     const next = checks.map((c) => c.id === checkId ? { ...c, done: !c.done } : c);
     setChecks(next);
     await saveChecks(next);
-    pushToCloud(null, next, null, null);
+    pushToCloud(null, next, null);
   };
 
   const addCheck = async (item) => {
@@ -132,14 +131,14 @@ export function TripProvider({ children }) {
     const next = [...checks, { ...item, tripId: activeTrip.id, id: Date.now().toString(), done: false }];
     setChecks(next);
     await saveChecks(next);
-    pushToCloud(null, next, null, null);
+    pushToCloud(null, next, null);
   };
 
   const deleteCheck = async (id) => {
     const next = checks.filter((c) => c.id !== id);
     setChecks(next);
     await saveChecks(next);
-    pushToCloud(null, next, null, null);
+    pushToCloud(null, next, null);
   };
 
   const addLooks = async (newLooks) => {
@@ -148,30 +147,14 @@ export function TripProvider({ children }) {
     const next = [...looks.filter((l) => !withTrip.some((nl) => nl.id === l.id)), ...withTrip];
     setLooks(next);
     await saveLooks(next);
-    pushToCloud(null, null, next, null);
+    pushToCloud(null, null, next);
   };
 
   const removeLook = async (id) => {
     const next = looks.filter((l) => l.id !== id);
     setLooks(next);
     await saveLooks(next);
-    pushToCloud(null, null, next, null);
-  };
-
-  const addPlaces = async (newPlaces) => {
-    if (!activeTrip) return;
-    const withTrip = newPlaces.map((p) => ({ ...p, tripId: activeTrip.id }));
-    const next = [...places.filter((p) => !withTrip.some((np) => np.id === p.id)), ...withTrip];
-    setPlaces(next);
-    await savePlaces(next);
-    pushToCloud(null, null, null, next);
-  };
-
-  const removePlace = async (id) => {
-    const next = places.filter((p) => p.id !== id);
-    setPlaces(next);
-    await savePlaces(next);
-    pushToCloud(null, null, null, next);
+    pushToCloud(null, null, next);
   };
 
   return (
@@ -179,8 +162,6 @@ export function TripProvider({ children }) {
       value={{
         trips,
         activeTrip,
-        activeIndex,
-        setActiveIndex,
         addTrip,
         updateTrip,
         deleteTrip,
@@ -193,10 +174,6 @@ export function TripProvider({ children }) {
         activeLooks,
         addLooks,
         removeLook,
-        places,
-        activePlaces,
-        addPlaces,
-        removePlace,
         loaded,
         synced,
       }}

@@ -62,7 +62,6 @@ export interface CloudData {
   trips:  any[];
   checks: any[];
   looks:  any[];
-  places: any[];
 }
 
 export async function loadFromCloud(deviceId: string): Promise<CloudData | null> {
@@ -70,7 +69,7 @@ export async function loadFromCloud(deviceId: string): Promise<CloudData | null>
   try {
     const { data, error } = await supabase
       .from('app_data')
-      .select('trips, checks, looks, places')
+      .select('trips, checks, looks')
       .eq('device_id', deviceId)
       .single();
     if (error || !data) return null;
@@ -89,4 +88,34 @@ export async function saveToCloud(deviceId: string, payload: CloudData): Promise
       synced_at: new Date().toISOString(),
     });
   } catch {}
+}
+
+/* ── image upload ────────────────────────────────────────────────── */
+
+const IMAGES_BUCKET = 'trip-images';
+
+function contentTypeFor(uri: string): string {
+  const ext = uri.split('.').pop()?.split('?')[0]?.toLowerCase();
+  if (ext === 'png') return 'image/png';
+  if (ext === 'webp') return 'image/webp';
+  if (ext === 'heic' || ext === 'heif') return 'image/heic';
+  return 'image/jpeg';
+}
+
+// Faz upload de uma imagem local (URI do image-picker) para o Storage e
+// retorna a URL pública. Sem isso, salvaríamos só o caminho local do arquivo,
+// que não existe em outros dispositivos nem sobrevive à limpeza de cache do SO.
+export async function uploadImage(uri: string, path: string): Promise<string | null> {
+  if (!supabase) return null;
+  try {
+    const arraybuffer = await fetch(uri).then((res) => res.arrayBuffer());
+    const { error } = await supabase.storage
+      .from(IMAGES_BUCKET)
+      .upload(path, arraybuffer, { contentType: contentTypeFor(uri), upsert: true });
+    if (error) return null;
+    const { data } = supabase.storage.from(IMAGES_BUCKET).getPublicUrl(path);
+    return data.publicUrl;
+  } catch {
+    return null;
+  }
 }

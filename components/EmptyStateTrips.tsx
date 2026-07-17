@@ -154,7 +154,7 @@ export function EmptyStateTrips() {
 
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => nav.push("/trips")}
+            onPress={() => nav.push("/trip-form")}
             style={s.buttonWrapper}
           >
             <LinearGradient

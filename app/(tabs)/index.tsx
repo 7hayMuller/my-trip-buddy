@@ -1,14 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { differenceInDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Image } from "expo-image";
+import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
   Animated,
   ImageBackground,
-  ScrollView,
+  Modal,
   StyleSheet,
   Text,
   TextInput,
@@ -23,7 +23,8 @@ import { WorldMapPin } from "../../components/WorldMapPin";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useTrips } from "../../hooks/useTrips";
 import { colors, getTripImage, radius, shadow, spacing } from "../../theme";
-import { CheckItem, LookPin, PlacePin, Trip } from "../../types";
+import { CheckItem } from "../../types";
+import { getDeviceId, uploadImage } from "../../utils/supabase";
 import { getVisaWarnings } from "../../utils/visa";
 
 /* ─── category pill colors ───────────────────────────────────── */
@@ -48,39 +49,44 @@ function CdBox({ value, label }: { value: number; label: string }) {
   );
 }
 
+function SectionAddButton({
+  onPress,
+  icon,
+  gradient,
+  iconColor = colors.white,
+  shadowColor,
+}: {
+  onPress: () => void;
+  icon: keyof typeof Ionicons.glyphMap;
+  gradient: readonly [string, string, ...string[]];
+  iconColor?: string;
+  shadowColor: string;
+}) {
+  return (
+    <LinearGradient
+      colors={gradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[s.sectionAddBtnGrad, { shadowColor }]}
+    >
+      <TouchableOpacity
+        style={s.sectionAddBtn}
+        onPress={onPress}
+        hitSlop={8}
+        activeOpacity={0.8}
+      >
+        <Ionicons name={icon} size={17} color={iconColor} />
+      </TouchableOpacity>
+    </LinearGradient>
+  );
+}
+
 function StatCard({ value, label }: { value: string; label: string }) {
   return (
     <View style={s.statCard}>
       <Text style={s.statNum}>{value}</Text>
       <Text style={s.statLabel}>{label}</Text>
     </View>
-  );
-}
-
-function TripChip({
-  trip,
-  active,
-  onPress,
-}: {
-  trip: Trip;
-  active: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      style={[s.chip, active && s.chipActive]}
-      activeOpacity={0.7}
-    >
-      <Ionicons
-        name="airplane"
-        size={11}
-        color={active ? colors.white : colors.muted}
-      />
-      <Text style={[s.chipText, active && s.chipTextActive]} numberOfLines={1}>
-        {trip.name}
-      </Text>
-    </TouchableOpacity>
   );
 }
 
@@ -132,21 +138,17 @@ export default function HomeScreen() {
   const {
     trips,
     activeTrip,
-    activeIndex,
-    setActiveIndex,
+    updateTrip,
     activeChecks,
     toggleCheck,
     addCheck,
     deleteCheck,
-    activeLooks,
-    removeLook,
-    activePlaces,
-    removePlace,
   } = useTrips();
   const cd = useCountdown(activeTrip?.depart);
 
   const [showAddItem, setShowAddItem] = useState(false);
   const [newItemText, setNewItemText] = useState("");
+  const [showEditMenu, setShowEditMenu] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
 
@@ -218,6 +220,28 @@ export default function HomeScreen() {
     setShowAddItem(false);
   };
 
+  const handleChangeCover = async () => {
+    if (!activeTrip) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") return;
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.85,
+    });
+    if (result.canceled) return;
+
+    const localUri = result.assets[0].uri;
+    const deviceId = await getDeviceId();
+    const uploadedUrl = await uploadImage(
+      localUri,
+      `covers/${deviceId}/${activeTrip.id}.jpg`,
+    );
+    await updateTrip(activeTrip.id, { coverImage: uploadedUrl ?? localUri });
+  };
+
   const heroContent = (
     <>
       <LinearGradient
@@ -255,12 +279,7 @@ export default function HomeScreen() {
             <TouchableOpacity
               style={s.editBtn}
               onPress={() =>
-                activeTrip
-                  ? nav.push({
-                      pathname: "/trips",
-                      params: { tripId: activeTrip.id },
-                    })
-                  : nav.push("/trips")
+                activeTrip ? setShowEditMenu(true) : nav.push("/trip-form")
               }
               activeOpacity={0.8}
             >
@@ -317,37 +336,6 @@ export default function HomeScreen() {
         )}
         scrollEventThrottle={16}
       >
-        <Text style={s.secLabel}>suas viagens</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginBottom: spacing.lg }}
-        >
-          {trips.map((t: any, i: any) => (
-            <TripChip
-              key={t.id}
-              trip={t}
-              active={i === activeIndex}
-              onPress={() => setActiveIndex(i)}
-            />
-          ))}
-          <LinearGradient
-            colors={[colors.sage, colors.teal]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={s.chipAddGrad}
-          >
-            <TouchableOpacity
-              style={s.chipAdd}
-              onPress={() => nav.push("/trips")}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="add" size={13} color={colors.white} />
-              <Text style={s.chipAddText}>nova viagem</Text>
-            </TouchableOpacity>
-          </LinearGradient>
-        </ScrollView>
-
         <View style={s.statRow}>
           <LinearGradient
             colors={["rgba(107,169,160,0.08)", "rgba(107,169,160,0.03)"]}
@@ -392,11 +380,45 @@ export default function HomeScreen() {
           </>
         )}
 
-        {activeTrip &&
-          (activeTrip.hotels ?? []).filter((h) => h.name.trim()).length > 0 && (
-            <>
+        {activeTrip && (
+          <>
+            <View style={s.secRow}>
               <Text style={s.secLabel}>hospedagens</Text>
-              {(activeTrip.hotels ?? [])
+              <SectionAddButton
+                icon="add"
+                gradient={[colors.teal, colors.teal2]}
+                shadowColor={colors.teal}
+                onPress={() =>
+                  nav.push({
+                    pathname: "/trip-form",
+                    params: { tripId: activeTrip.id, step: "2" },
+                  })
+                }
+              />
+            </View>
+
+            {(activeTrip.hotels ?? []).filter((h) => h.name.trim()).length ===
+            0 ? (
+              <TouchableOpacity
+                style={s.looksEmpty}
+                onPress={() =>
+                  nav.push({
+                    pathname: "/trip-form",
+                    params: { tripId: activeTrip.id, step: "2" },
+                  })
+                }
+                activeOpacity={0.8}
+              >
+                <Ionicons name="bed-outline" size={20} color={colors.teal2} />
+                <Text style={s.looksEmptyText}>Adicionar hospedagem</Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={16}
+                  color={colors.muted}
+                />
+              </TouchableOpacity>
+            ) : (
+              (activeTrip.hotels ?? [])
                 .filter((h) => h.name.trim())
                 .map((hotel, i, arr) => {
                   const { checkIn, checkOut } = hotelDates(i, arr.length);
@@ -410,9 +432,10 @@ export default function HomeScreen() {
                       confirmationCode={hotel.conf || undefined}
                     />
                   );
-                })}
-            </>
-          )}
+                })
+            )}
+          </>
+        )}
 
         {visaWarnings.length > 0 && (
           <View style={s.visaCard}>
@@ -434,19 +457,12 @@ export default function HomeScreen() {
           <>
             <View style={s.secRow}>
               <Text style={s.secLabel}>checklist</Text>
-              <TouchableOpacity
+              <SectionAddButton
+                icon={showAddItem ? "close" : "add"}
+                gradient={[colors.blush, colors.accent]}
+                shadowColor={colors.blush}
                 onPress={() => setShowAddItem((v) => !v)}
-                style={s.addIconBtn}
-                hitSlop={8}
-              >
-                <Ionicons
-                  name={
-                    showAddItem ? "close-circle-outline" : "add-circle-outline"
-                  }
-                  size={18}
-                  color={colors.teal2}
-                />
-              </TouchableOpacity>
+              />
             </View>
 
             <LinearGradient
@@ -500,157 +516,6 @@ export default function HomeScreen() {
                 )}
               </View>
             </LinearGradient>
-          </>
-        )}
-
-        {activeTrip && (
-          <>
-            <View style={s.secRow}>
-              <Text style={s.secLabel}>looks da viagem</Text>
-              <TouchableOpacity
-                onPress={() => nav.push("/pinterest-picker")}
-                style={s.addIconBtn}
-                hitSlop={8}
-              >
-                <Ionicons name="logo-pinterest" size={18} color="#E60023" />
-              </TouchableOpacity>
-            </View>
-
-            {activeLooks.length === 0 ? (
-              <TouchableOpacity
-                style={s.looksEmpty}
-                onPress={() => nav.push("/pinterest-picker")}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="logo-pinterest" size={22} color="#E60023" />
-                <Text style={s.looksEmptyText}>
-                  Adicionar looks do Pinterest
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={16}
-                  color={colors.muted}
-                />
-              </TouchableOpacity>
-            ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={s.looksScroll}
-                contentContainerStyle={{
-                  gap: spacing.sm,
-                  paddingRight: spacing.lg,
-                }}
-              >
-                {activeLooks.map((look: LookPin) => (
-                  <View key={look.id} style={s.lookCard}>
-                    <Image
-                      source={{ uri: look.imageUrl }}
-                      style={s.lookImg}
-                      contentFit="cover"
-                    />
-                    <TouchableOpacity
-                      style={s.lookRemove}
-                      onPress={() => removeLook(look.id)}
-                      hitSlop={4}
-                    >
-                      <Ionicons
-                        name="close-circle"
-                        size={18}
-                        color={colors.white}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                <TouchableOpacity
-                  style={s.lookAdd}
-                  onPress={() => nav.push("/pinterest-picker")}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="add" size={24} color={colors.muted} />
-                </TouchableOpacity>
-              </ScrollView>
-            )}
-          </>
-        )}
-
-        {activeTrip && (
-          <>
-            <View style={s.secRow}>
-              <Text style={s.secLabel}>lugares para visitar</Text>
-              <TouchableOpacity
-                onPress={() => nav.push("/places-picker")}
-                style={s.addIconBtn}
-                hitSlop={8}
-              >
-                <Ionicons
-                  name="add-circle-outline"
-                  size={18}
-                  color={colors.teal2}
-                />
-              </TouchableOpacity>
-            </View>
-
-            {activePlaces.length === 0 ? (
-              <TouchableOpacity
-                style={s.looksEmpty}
-                onPress={() => nav.push("/places-picker")}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="map-outline" size={20} color={colors.teal2} />
-                <Text style={s.looksEmptyText}>
-                  Adicionar lugares para visitar
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={16}
-                  color={colors.muted}
-                />
-              </TouchableOpacity>
-            ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={s.looksScroll}
-                contentContainerStyle={{
-                  gap: spacing.sm,
-                  paddingRight: spacing.lg,
-                }}
-              >
-                {activePlaces.map((place: PlacePin) => (
-                  <View key={place.id} style={s.placeCard}>
-                    <Image
-                      source={{ uri: place.imageUrl }}
-                      style={StyleSheet.absoluteFill}
-                      contentFit="cover"
-                    />
-                    <View style={s.placeGrad}>
-                      <Text style={s.placeName} numberOfLines={1}>
-                        {place.name}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      style={s.lookRemove}
-                      onPress={() => removePlace(place.id)}
-                      hitSlop={4}
-                    >
-                      <Ionicons
-                        name="close-circle"
-                        size={18}
-                        color={colors.white}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                <TouchableOpacity
-                  style={s.lookAdd}
-                  onPress={() => nav.push("/places-picker")}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons name="add" size={24} color={colors.muted} />
-                </TouchableOpacity>
-              </ScrollView>
-            )}
           </>
         )}
 
@@ -736,6 +601,70 @@ export default function HomeScreen() {
 
         <View style={{ height: 100 }} />
       </Animated.ScrollView>
+
+      <Modal
+        visible={showEditMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowEditMenu(false)}
+      >
+        <TouchableOpacity
+          style={s.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setShowEditMenu(false)}
+        >
+          <TouchableOpacity
+            style={[s.menuCard, { marginBottom: insets.bottom + spacing.md }]}
+            activeOpacity={1}
+            onPress={() => {}}
+          >
+            <TouchableOpacity
+              style={s.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                setShowEditMenu(false);
+                handleChangeCover();
+              }}
+            >
+              <View style={[s.menuIconWrap, { backgroundColor: colors.tealLight }]}>
+                <Ionicons name="camera-outline" size={18} color={colors.teal2} />
+              </View>
+              <Text style={s.menuItemText}>Alterar foto da capa</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </TouchableOpacity>
+
+            <View style={s.menuDivider} />
+
+            <TouchableOpacity
+              style={s.menuItem}
+              activeOpacity={0.7}
+              onPress={() => {
+                setShowEditMenu(false);
+                if (activeTrip) {
+                  nav.push({
+                    pathname: "/trip-form",
+                    params: { tripId: activeTrip.id },
+                  });
+                }
+              }}
+            >
+              <View style={[s.menuIconWrap, { backgroundColor: colors.blushLight }]}>
+                <Ionicons name="pencil-outline" size={18} color={colors.accent} />
+              </View>
+              <Text style={s.menuItemText}>Editar viagem</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[s.menuCancel, { marginBottom: insets.bottom + spacing.sm }]}
+            activeOpacity={0.7}
+            onPress={() => setShowEditMenu(false)}
+          >
+            <Text style={s.menuCancelText}>cancelar</Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -810,6 +739,58 @@ const s = StyleSheet.create({
     justifyContent: "center",
   },
 
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(13,22,38,0.5)",
+    justifyContent: "flex-end",
+  },
+  menuCard: {
+    backgroundColor: colors.white,
+    borderRadius: radius.xl,
+    marginHorizontal: spacing.lg,
+    overflow: "hidden",
+    ...shadow.md,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  menuIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  menuItemText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.navy,
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginLeft: spacing.md + 32 + spacing.sm,
+  },
+  menuCancel: {
+    backgroundColor: colors.white,
+    borderRadius: radius.xl,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    ...shadow.md,
+  },
+  menuCancelText: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.accent,
+  },
+
   /* countdown */
   cdPill: {
     flexDirection: "row",
@@ -872,50 +853,22 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: spacing.sm,
   },
-  addIconBtn: {
-    padding: 2,
-  },
-
-  /* trip chips */
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 7,
+  sectionAddBtnGrad: {
+    width: 30,
+    height: 30,
     borderRadius: radius.full,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
-    marginRight: spacing.sm,
-    ...shadow.sm,
-  },
-  chipActive: { backgroundColor: colors.blush, borderColor: colors.blush },
-  chipText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.muted,
-    maxWidth: 110,
-  },
-  chipTextActive: { color: colors.white },
-  chipAddGrad: {
-    borderRadius: radius.full,
-    marginRight: spacing.sm,
     overflow: "hidden",
-    shadowColor: colors.sage,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
     elevation: 4,
   },
-  chipAdd: {
-    flexDirection: "row",
+  sectionAddBtn: {
+    flex: 1,
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 7,
+    justifyContent: "center",
   },
-  chipAddText: { fontSize: 11, fontWeight: "700", color: colors.white },
+
 
   /* stats */
   statRow: { flexDirection: "row", gap: 8, marginBottom: spacing.md },
@@ -1066,25 +1019,6 @@ const s = StyleSheet.create({
   },
   addBtnText: { fontSize: 12, fontWeight: "800", color: colors.white },
 
-  /* place cards */
-  placeCard: {
-    width: 150,
-    height: 110,
-    borderRadius: radius.xl,
-    overflow: "hidden",
-    ...shadow.sm,
-  },
-  placeGrad: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
-    backgroundColor: "rgba(17,30,53,0.6)",
-  },
-  placeName: { fontSize: 12, fontWeight: "800", color: colors.white },
-
   /* teal highlight */
   tealCardGrad: {
     borderRadius: radius.xl,
@@ -1115,8 +1049,7 @@ const s = StyleSheet.create({
     marginTop: 1,
   },
 
-  /* looks */
-  looksScroll: { marginBottom: spacing.md },
+  /* hospedagens empty state */
   looksEmpty: {
     flexDirection: "row",
     alignItems: "center",
@@ -1135,32 +1068,6 @@ const s = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     color: colors.muted,
-  },
-  lookCard: {
-    width: 110,
-    height: 150,
-    borderRadius: radius.lg,
-    overflow: "hidden",
-    ...shadow.sm,
-  },
-  lookImg: { flex: 1 },
-  lookRemove: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    backgroundColor: "rgba(0,0,0,0.4)",
-    borderRadius: 10,
-  },
-  lookAdd: {
-    width: 110,
-    height: 150,
-    borderRadius: radius.lg,
-    borderWidth: 1.5,
-    borderColor: colors.border,
-    borderStyle: "dashed",
-    backgroundColor: colors.white,
-    alignItems: "center",
-    justifyContent: "center",
   },
 
   /* confirmations */

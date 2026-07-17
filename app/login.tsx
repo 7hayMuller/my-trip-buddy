@@ -121,8 +121,15 @@ export default function LoginScreen() {
 
       <View style={[s.content, { paddingTop: insets.top }]}>
         <View style={s.header}>
-          <MyTripBuddyLogo size={280} ink={colors.white} accent={colors.blush} />
-          <Text style={s.subtitle}>Organize suas viagens com estilo</Text>
+          <MyTripBuddyLogo
+            size={280}
+            ink={colors.white}
+            accent={colors.blush}
+          />
+          <Text style={s.subtitle}>
+            Do intinerário aos looks , organize suas viagens de maneira fácil e
+            divertida!
+          </Text>
         </View>
 
         {/* <View style={s.features}>

@@ -143,8 +143,19 @@ export function getDestImage(dest: string): string {
   return DESTINATION_IMAGES['default'];
 }
 
-export function getTripImage(trip: { name: string; destinations: string[] }): string {
+export function getTripImage(trip: { name: string; destinations: string[]; coverImage?: string }): string {
+  if (trip.coverImage) return trip.coverImage;
   const lower = [...trip.destinations, trip.name].join(' ').toLowerCase();
+  for (const [key, url] of Object.entries(DESTINATION_IMAGES)) {
+    if (lower.includes(key)) return url;
+  }
+  return DESTINATION_IMAGES['default'];
+}
+
+// Capa determinada só pelos destinos — sem fallback para coverImage
+// customizado. Usada em telas onde a capa não deve ser editável pelo usuário.
+export function getDestinationsImage(destinations: string[]): string {
+  const lower = destinations.join(' ').toLowerCase();
   for (const [key, url] of Object.entries(DESTINATION_IMAGES)) {
     if (lower.includes(key)) return url;
   }

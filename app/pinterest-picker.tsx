@@ -23,6 +23,7 @@ import { useTrips } from "../hooks/useTrips";
 import { colors, radius, shadow, spacing } from "../theme";
 import { LookPin } from "../types";
 import { pinterestSearchUrl } from "../utils/pinterest";
+import { getDeviceId, uploadImage } from "../utils/supabase";
 import {
   searchPlacePhotos,
   UNSPLASH_KEY,
@@ -157,12 +158,20 @@ export default function LooksPickerScreen() {
   const saveLooks = async () => {
     if (!totalCount) return;
     setSaving(true);
+
+    const deviceId = await getDeviceId();
+    const uploadedGalleryPicks = await Promise.all(
+      galleryPicks.map(async (p) => {
+        const uploadedUrl = await uploadImage(
+          p.uri,
+          `looks/${deviceId}/${p.id}.jpg`,
+        );
+        return { id: p.id, tripId: activeTrip?.id ?? "", imageUrl: uploadedUrl ?? p.uri };
+      }),
+    );
+
     const newLooks: LookPin[] = [
-      ...galleryPicks.map((p) => ({
-        id: p.id,
-        tripId: activeTrip?.id ?? "",
-        imageUrl: p.uri,
-      })),
+      ...uploadedGalleryPicks,
       ...selectedPhotos.map((photo) => ({
         id: photo.id,
         tripId: activeTrip?.id ?? "",
