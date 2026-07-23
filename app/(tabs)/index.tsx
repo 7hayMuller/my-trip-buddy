@@ -6,8 +6,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import {
+  Alert,
   Animated,
+  Image,
   ImageBackground,
+  Linking,
   Modal,
   StyleSheet,
   Text,
@@ -16,26 +19,33 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import HotelCard from "../../components/HotelCard";
 import { EmptyStateTrips } from "../../components/EmptyStateTrips";
-import PlaneRoute from "../../components/PlaneRoute";
+import HotelCard from "../../components/HotelCard";
 import { WorldMapPin } from "../../components/WorldMapPin";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useTrips } from "../../hooks/useTrips";
-import { colors, getTripImage, radius, shadow, spacing } from "../../theme";
+import {
+  colors,
+  dark as DARK,
+  getTripImage,
+  radius,
+  shadow,
+  spacing,
+} from "../../theme";
 import { CheckItem } from "../../types";
+import { formatMoney, sumExpenses } from "../../utils/currency";
 import { getDeviceId, uploadImage } from "../../utils/supabase";
 import { getVisaWarnings } from "../../utils/visa";
 
 /* ─── category pill colors ───────────────────────────────────── */
 
 const CAT_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  doc: { bg: colors.greenLight, text: colors.green, label: "docs" },
-  fly: { bg: colors.purpleLight, text: colors.purple, label: "voo" },
-  stay: { bg: colors.goldLight, text: colors.gold, label: "hotel" },
-  look: { bg: colors.accentLight, text: colors.accent, label: "looks" },
-  misc: { bg: colors.offwhite, text: colors.muted, label: "outro" },
-  visa: { bg: colors.warningLight, text: colors.warning, label: "visto" },
+  doc: { bg: DARK.green, text: DARK.ink, label: "docs" },
+  fly: { bg: DARK.blue, text: DARK.ink, label: "voo" },
+  stay: { bg: DARK.yellow, text: DARK.ink, label: "hotel" },
+  look: { bg: DARK.pink, text: DARK.ink, label: "looks" },
+  misc: { bg: "rgba(255,255,255,0.08)", text: DARK.muted, label: "outro" },
+  visa: { bg: DARK.yellow, text: DARK.ink, label: "visto" },
 };
 
 /* ─── small reusable pieces ─────────────────────────────────── */
@@ -52,38 +62,37 @@ function CdBox({ value, label }: { value: number; label: string }) {
 function SectionAddButton({
   onPress,
   icon,
-  gradient,
-  iconColor = colors.white,
-  shadowColor,
+  color,
+  iconColor = DARK.ink,
 }: {
   onPress: () => void;
   icon: keyof typeof Ionicons.glyphMap;
-  gradient: readonly [string, string, ...string[]];
+  color: string;
   iconColor?: string;
-  shadowColor: string;
 }) {
   return (
-    <LinearGradient
-      colors={gradient}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[s.sectionAddBtnGrad, { shadowColor }]}
+    <TouchableOpacity
+      style={[s.sectionAddBtn, { backgroundColor: color }]}
+      onPress={onPress}
+      hitSlop={8}
+      activeOpacity={0.8}
     >
-      <TouchableOpacity
-        style={s.sectionAddBtn}
-        onPress={onPress}
-        hitSlop={8}
-        activeOpacity={0.8}
-      >
-        <Ionicons name={icon} size={17} color={iconColor} />
-      </TouchableOpacity>
-    </LinearGradient>
+      <Ionicons name={icon} size={17} color={iconColor} />
+    </TouchableOpacity>
   );
 }
 
-function StatCard({ value, label }: { value: string; label: string }) {
+function StatCard({
+  value,
+  label,
+  color,
+}: {
+  value: string;
+  label: string;
+  color: string;
+}) {
   return (
-    <View style={s.statCard}>
+    <View style={[s.statCard, { backgroundColor: color }]}>
       <Text style={s.statNum}>{value}</Text>
       <Text style={s.statLabel}>{label}</Text>
     </View>
@@ -109,7 +118,7 @@ function CheckRow({
       >
         <View style={[s.checkCircle, item.done && s.checkCircleDone]}>
           {item.done && (
-            <Ionicons name="checkmark" size={11} color={colors.white} />
+            <Ionicons name="checkmark" size={11} color={DARK.ink} />
           )}
         </View>
       </TouchableOpacity>
@@ -123,7 +132,7 @@ function CheckRow({
         <Text style={[s.catPillText, { color: cs.text }]}>{cs.label}</Text>
       </View>
       <TouchableOpacity onPress={onDelete} hitSlop={8} style={s.deleteBtn}>
-        <Ionicons name="close" size={12} color={colors.muted} />
+        <Ionicons name="close" size={12} color={DARK.muted} />
       </TouchableOpacity>
     </View>
   );
@@ -169,6 +178,9 @@ export default function HomeScreen() {
 
   const coverUri = activeTrip ? getTripImage(activeTrip) : null;
 
+  const budgetCurrency = activeTrip?.budgetCurrency ?? "BRL";
+  const budgetSpent = sumExpenses(activeTrip?.expenses ?? [], budgetCurrency);
+
   const formatDate = (s: string) => {
     try {
       return format(new Date(s + "T00:00:00"), "d 'de' MMM", { locale: ptBR });
@@ -195,7 +207,8 @@ export default function HomeScreen() {
     total: number,
   ): { checkIn: string; checkOut: string } => {
     if (!activeTrip) return { checkIn: "", checkOut: "" };
-    if (total <= 1) return { checkIn: activeTrip.depart, checkOut: activeTrip.ret };
+    if (total <= 1)
+      return { checkIn: activeTrip.depart, checkOut: activeTrip.ret };
     const dep = new Date(activeTrip.depart + "T00:00:00");
     const ret = new Date(activeTrip.ret + "T00:00:00");
     const totalDays = differenceInDays(ret, dep);
@@ -222,43 +235,77 @@ export default function HomeScreen() {
 
   const handleChangeCover = async () => {
     if (!activeTrip) return;
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") return;
+    try {
+      const { status, canAskAgain } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permissão necessária",
+          canAskAgain
+            ? "Precisamos de acesso às suas fotos para trocar a capa da viagem."
+            : "O acesso às fotos foi negado. Ative a permissão de fotos para este app nas configurações do celular.",
+          canAskAgain
+            ? [{ text: "Ok" }]
+            : [
+                { text: "Cancelar", style: "cancel" },
+                {
+                  text: "Abrir configurações",
+                  onPress: () => Linking.openSettings(),
+                },
+              ],
+        );
+        return;
+      }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 0.85,
-    });
-    if (result.canceled) return;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.85,
+      });
+      if (result.canceled) return;
 
-    const localUri = result.assets[0].uri;
-    const deviceId = await getDeviceId();
-    const uploadedUrl = await uploadImage(
-      localUri,
-      `covers/${deviceId}/${activeTrip.id}.jpg`,
-    );
-    await updateTrip(activeTrip.id, { coverImage: uploadedUrl ?? localUri });
+      const localUri = result.assets[0].uri;
+      const deviceId = await getDeviceId();
+      const uploadedUrl = await uploadImage(
+        localUri,
+        `covers/${deviceId}/${activeTrip.id}.jpg`,
+      );
+      // O caminho de upload é sempre o mesmo (upsert), então a URL pública
+      // não muda entre trocas de capa — sem um cache-buster, o Image cacheado
+      // (app e/ou CDN) continua mostrando a foto antiga mesmo após o upload.
+      const coverImage = uploadedUrl
+        ? `${uploadedUrl}?v=${Date.now()}`
+        : localUri;
+      await updateTrip(activeTrip.id, { coverImage });
+    } catch (err) {
+      console.error("Erro ao trocar capa da viagem:", err);
+      Alert.alert(
+        "Não foi possível trocar a capa",
+        "Tente novamente em alguns instantes.",
+      );
+    }
   };
 
   const heroContent = (
     <>
       <LinearGradient
         colors={[
-          "rgba(17,30,53,0.10)",
-          "rgba(17,30,53,0.55)",
-          "rgba(17,30,53,0.88)",
-          "rgba(27,43,75,0.97)",
+          "rgba(5,5,5,0.10)",
+          "rgba(5,5,5,0.55)",
+          "rgba(5,5,5,0.88)",
+          "rgba(5,5,5,0.97)",
         ]}
         locations={[0, 0.35, 0.72, 1]}
         style={StyleSheet.absoluteFill}
       />
       <View style={s.dots} pointerEvents="none" />
-      <View style={[s.heroInner, { paddingTop: insets.top + 6 }]}>
+      <View
+        style={[s.heroInner, { paddingTop: insets.top + 6, marginTop: -60 }]}
+      >
         <View style={s.heroTopRow}>
           <View>
-            <Text style={s.heroEyebrow}>sua viagem dos sonhos</Text>
+            <Text style={s.heroEyebrow}>Vai ser demais!</Text>
             <Text style={s.heroTitle} numberOfLines={1}>
               {activeTrip?.name ?? "Adicione uma viagem"}
             </Text>
@@ -270,29 +317,25 @@ export default function HomeScreen() {
               </Text>
             )}
           </View>
-          <LinearGradient
-            colors={[colors.blush, colors.accent]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.editBtnGrad}
+          <TouchableOpacity
+            style={s.editBtn}
+            onPress={() =>
+              activeTrip ? setShowEditMenu(true) : nav.push("/trip-form")
+            }
+            activeOpacity={0.8}
           >
-            <TouchableOpacity
-              style={s.editBtn}
-              onPress={() =>
-                activeTrip ? setShowEditMenu(true) : nav.push("/trip-form")
-              }
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name={activeTrip ? "pencil" : "add"}
-                size={15}
-                color={colors.white}
+            {activeTrip ? (
+              <Image
+                source={require("../../assets/images/icon-edit.png")}
+                style={{ width: 18, height: 18 }}
               />
-            </TouchableOpacity>
-          </LinearGradient>
+            ) : (
+              <Ionicons name="add" size={15} color={DARK.ink} />
+            )}
+          </TouchableOpacity>
         </View>
 
-        {segments.length > 0 && <PlaneRoute segments={segments} />}
+        {/* {segments.length > 0 && <PlaneRoute segments={segments} />} */}
 
         {activeTrip && (
           <View style={s.cdPill}>
@@ -312,17 +355,22 @@ export default function HomeScreen() {
   return (
     <View style={s.root}>
       <View style={s.heroWrap}>
-        {coverUri ? (
-          <ImageBackground
-            source={{ uri: coverUri }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="cover"
-          />
-        ) : (
-          <View
-            style={[StyleSheet.absoluteFill, { backgroundColor: colors.navy }]}
-          />
-        )}
+        <View style={[StyleSheet.absoluteFill, s.heroImageClip]}>
+          {coverUri ? (
+            <ImageBackground
+              source={{ uri: coverUri }}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              style={[
+                StyleSheet.absoluteFill,
+                { backgroundColor: DARK.surface },
+              ]}
+            />
+          )}
+        </View>
         {heroContent}
       </View>
 
@@ -337,41 +385,77 @@ export default function HomeScreen() {
         scrollEventThrottle={16}
       >
         <View style={s.statRow}>
-          <LinearGradient
-            colors={["rgba(107,169,160,0.08)", "rgba(107,169,160,0.03)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.statCardGrad}
-          >
-            <StatCard
-              value={String(activeTrip?.destinations?.length ?? 0)}
-              label="destinos"
-            />
-          </LinearGradient>
-          <LinearGradient
-            colors={["rgba(123,104,182,0.08)", "rgba(123,104,182,0.03)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.statCardGrad}
-          >
-            <StatCard value={String(nights)} label="noites" />
-          </LinearGradient>
-          <LinearGradient
-            colors={["rgba(216,168,196,0.08)", "rgba(216,168,196,0.03)"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={s.statCardGrad}
-          >
-            <StatCard
-              value={
-                activeChecks.length > 0
-                  ? `${doneChecks}/${activeChecks.length}`
-                  : "–"
-              }
-              label="checklist"
-            />
-          </LinearGradient>
+          <StatCard
+            value={String(activeTrip?.destinations?.length ?? 0)}
+            label="destinos"
+            color={DARK.green}
+          />
+          <StatCard value={String(nights)} label="noites" color={DARK.pink} />
+          <StatCard
+            value={
+              activeChecks.length > 0
+                ? `${doneChecks}/${activeChecks.length}`
+                : "–"
+            }
+            label="checklist"
+            color={DARK.blue}
+          />
         </View>
+
+        {activeTrip && (
+          <>
+            <Text style={s.secLabel}>orçamento</Text>
+            <TouchableOpacity
+              style={s.budgetCard}
+              onPress={() => nav.push("/budget")}
+              activeOpacity={0.85}
+            >
+              {activeTrip.budgetTotal ? (
+                <View style={{ flex: 1 }}>
+                  <View style={s.budgetCardRow}>
+                    <Text style={s.budgetCardSpent}>
+                      {formatMoney(budgetSpent, budgetCurrency)}
+                    </Text>
+                    <Text style={s.budgetCardTotal}>
+                      {" "}
+                      / {formatMoney(activeTrip.budgetTotal, budgetCurrency)}
+                    </Text>
+                  </View>
+                  <View style={s.budgetTrack}>
+                    <View
+                      style={[
+                        s.budgetFill,
+                        {
+                          width: `${Math.min(1, budgetSpent / activeTrip.budgetTotal) * 100}%`,
+                          backgroundColor:
+                            budgetSpent > activeTrip.budgetTotal
+                              ? DARK.pink
+                              : DARK.lime,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+              ) : (
+                <View style={s.budgetCardEmptyRow}>
+                  <Image
+                    source={require("../../assets/images/icon-coins.png")}
+                    style={s.budgetCardIcon}
+                  />
+                  <Text style={s.budgetCardEmpty}>
+                    definir orçamento da viagem
+                  </Text>
+                </View>
+              )}
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={DARK.muted}
+                style={s.budgetCardChevron}
+              />
+            </TouchableOpacity>
+          </>
+        )}
 
         {activeTrip && (activeTrip.destinations?.length ?? 0) > 0 && (
           <>
@@ -386,8 +470,7 @@ export default function HomeScreen() {
               <Text style={s.secLabel}>hospedagens</Text>
               <SectionAddButton
                 icon="add"
-                gradient={[colors.teal, colors.teal2]}
-                shadowColor={colors.teal}
+                color={DARK.blue}
                 onPress={() =>
                   nav.push({
                     pathname: "/trip-form",
@@ -397,8 +480,8 @@ export default function HomeScreen() {
               />
             </View>
 
-            {(activeTrip.hotels ?? []).filter((h) => h.name.trim()).length ===
-            0 ? (
+            {(activeTrip.hotels ?? []).filter((h: any) => h.name.trim())
+              .length === 0 ? (
               <TouchableOpacity
                 style={s.looksEmpty}
                 onPress={() =>
@@ -409,18 +492,14 @@ export default function HomeScreen() {
                 }
                 activeOpacity={0.8}
               >
-                <Ionicons name="bed-outline" size={20} color={colors.teal2} />
+                <Ionicons name="bed-outline" size={20} color={DARK.blue} />
                 <Text style={s.looksEmptyText}>Adicionar hospedagem</Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={16}
-                  color={colors.muted}
-                />
+                <Ionicons name="chevron-forward" size={16} color={DARK.muted} />
               </TouchableOpacity>
             ) : (
               (activeTrip.hotels ?? [])
-                .filter((h) => h.name.trim())
-                .map((hotel, i, arr) => {
+                .filter((h: any) => h.name.trim())
+                .map((hotel: any, i: any, arr: any) => {
                   const { checkIn, checkOut } = hotelDates(i, arr.length);
                   return (
                     <HotelCard
@@ -440,7 +519,10 @@ export default function HomeScreen() {
         {visaWarnings.length > 0 && (
           <View style={s.visaCard}>
             <View style={s.visaHeader}>
-              <Ionicons name="alert-circle" size={15} color={colors.warning} />
+              <Image
+                source={require("../../assets/images/icon-warning.png")}
+                style={{ width: 18, height: 18 }}
+              />
               <Text style={s.visaTitle}>
                 atenção: visto pode ser necessário
               </Text>
@@ -459,63 +541,48 @@ export default function HomeScreen() {
               <Text style={s.secLabel}>checklist</Text>
               <SectionAddButton
                 icon={showAddItem ? "close" : "add"}
-                gradient={[colors.blush, colors.accent]}
-                shadowColor={colors.blush}
+                color={DARK.pink}
                 onPress={() => setShowAddItem((v) => !v)}
               />
             </View>
 
-            <LinearGradient
-              colors={["rgba(255,255,255,0.95)", "rgba(245,243,240,0.98)"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0.5, y: 1 }}
-              style={s.cardGrad}
-            >
-              <View style={s.card}>
-                {activeChecks.length === 0 && (
-                  <Text style={s.emptyCheck}>
-                    Nenhum item no checklist ainda.
-                  </Text>
-                )}
-                {activeChecks.map((item: CheckItem, i: number) => (
-                  <CheckRow
-                    key={item.id}
-                    item={item}
-                    onToggle={() => toggleCheck(item.id)}
-                    onDelete={() => deleteCheck(item.id)}
-                  />
-                ))}
+            <View style={s.card}>
+              {activeChecks.length === 0 && (
+                <Text style={s.emptyCheck}>
+                  Nenhum item no checklist ainda.
+                </Text>
+              )}
+              {activeChecks.map((item: CheckItem, i: number) => (
+                <CheckRow
+                  key={item.id}
+                  item={item}
+                  onToggle={() => toggleCheck(item.id)}
+                  onDelete={() => deleteCheck(item.id)}
+                />
+              ))}
 
-                {showAddItem && (
-                  <View style={s.addRow}>
-                    <TextInput
-                      style={s.addInput}
-                      value={newItemText}
-                      onChangeText={setNewItemText}
-                      placeholder="novo item..."
-                      placeholderTextColor={colors.muted}
-                      autoFocus
-                      returnKeyType="done"
-                      onSubmitEditing={handleAddItem}
-                    />
-                    <LinearGradient
-                      colors={[colors.blush, colors.accent]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 1 }}
-                      style={s.addBtnGrad}
-                    >
-                      <TouchableOpacity
-                        style={s.addBtn}
-                        onPress={handleAddItem}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={s.addBtnText}>adicionar</Text>
-                      </TouchableOpacity>
-                    </LinearGradient>
-                  </View>
-                )}
-              </View>
-            </LinearGradient>
+              {showAddItem && (
+                <View style={s.addRow}>
+                  <TextInput
+                    style={s.addInput}
+                    value={newItemText}
+                    onChangeText={setNewItemText}
+                    placeholder="novo item..."
+                    placeholderTextColor={DARK.muted}
+                    autoFocus
+                    returnKeyType="done"
+                    onSubmitEditing={handleAddItem}
+                  />
+                  <TouchableOpacity
+                    style={s.addBtn}
+                    onPress={handleAddItem}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={s.addBtnText}>adicionar</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           </>
         )}
 
@@ -548,52 +615,34 @@ export default function HomeScreen() {
             <Text style={s.secLabel}>confirmações</Text>
             <View style={s.confRow}>
               {activeTrip.flightConf ? (
-                <LinearGradient
-                  colors={["rgba(123,104,182,0.08)", "rgba(123,104,182,0.02)"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={s.confCardGrad}
-                >
-                  <View style={s.confCard}>
-                    <View style={s.confLabelRow}>
-                      <Ionicons
-                        name="airplane-outline"
-                        size={12}
-                        color={colors.muted}
-                      />
-                      <Text style={s.confLabel}>voo</Text>
-                    </View>
-                    <Text style={[s.confValue, { color: colors.purple }]}>
-                      {activeTrip.flightConf}
-                    </Text>
-                    <Text style={s.confSub}>confirmado</Text>
+                <View style={s.confCard}>
+                  <View style={s.confLabelRow}>
+                    <Ionicons
+                      name="airplane-outline"
+                      size={12}
+                      color={DARK.muted}
+                    />
+                    <Text style={s.confLabel}>voo</Text>
                   </View>
-                </LinearGradient>
+                  <Text style={[s.confValue, { color: DARK.blue }]}>
+                    {activeTrip.flightConf}
+                  </Text>
+                  <Text style={s.confSub}>confirmado</Text>
+                </View>
               ) : null}
               {activeTrip.hotelConf ? (
-                <LinearGradient
-                  colors={["rgba(107,169,160,0.08)", "rgba(107,169,160,0.02)"]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={s.confCardGrad}
-                >
-                  <View style={s.confCard}>
-                    <View style={s.confLabelRow}>
-                      <Ionicons
-                        name="bed-outline"
-                        size={12}
-                        color={colors.muted}
-                      />
-                      <Text style={s.confLabel}>hotel</Text>
-                    </View>
-                    <Text style={[s.confValue, { color: colors.teal2 }]}>
-                      {activeTrip.hotelConf}
-                    </Text>
-                    <Text style={s.confSub}>
-                      {activeTrip.destinations?.[0] ?? ""}
-                    </Text>
+                <View style={s.confCard}>
+                  <View style={s.confLabelRow}>
+                    <Ionicons name="bed-outline" size={12} color={DARK.muted} />
+                    <Text style={s.confLabel}>hotel</Text>
                   </View>
-                </LinearGradient>
+                  <Text style={[s.confValue, { color: DARK.pink }]}>
+                    {activeTrip.hotelConf}
+                  </Text>
+                  <Text style={s.confSub}>
+                    {activeTrip.destinations?.[0] ?? ""}
+                  </Text>
+                </View>
               ) : null}
             </View>
           </>
@@ -626,11 +675,14 @@ export default function HomeScreen() {
                 handleChangeCover();
               }}
             >
-              <View style={[s.menuIconWrap, { backgroundColor: colors.tealLight }]}>
-                <Ionicons name="camera-outline" size={18} color={colors.teal2} />
+              <View style={[s.menuIconWrap, { backgroundColor: DARK.blue }]}>
+                <Image
+                  source={require("../../assets/images/icon-camera.png")}
+                  style={{ width: 22, height: 22 }}
+                />
               </View>
               <Text style={s.menuItemText}>Alterar foto da capa</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+              <Ionicons name="chevron-forward" size={16} color={DARK.muted} />
             </TouchableOpacity>
 
             <View style={s.menuDivider} />
@@ -648,11 +700,14 @@ export default function HomeScreen() {
                 }
               }}
             >
-              <View style={[s.menuIconWrap, { backgroundColor: colors.blushLight }]}>
-                <Ionicons name="pencil-outline" size={18} color={colors.accent} />
+              <View style={[s.menuIconWrap, { backgroundColor: DARK.pink }]}>
+                <Image
+                  source={require("../../assets/images/icon-edit.png")}
+                  style={{ width: 22, height: 22 }}
+                />
               </View>
               <Text style={s.menuItemText}>Editar viagem</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+              <Ionicons name="chevron-forward" size={16} color={DARK.muted} />
             </TouchableOpacity>
           </TouchableOpacity>
 
@@ -672,80 +727,80 @@ export default function HomeScreen() {
 const HERO_HEIGHT = 300;
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.offwhite },
+  root: { flex: 1, backgroundColor: DARK.bg },
 
   /* hero */
   heroWrap: {
     height: HERO_HEIGHT,
-    backgroundColor: colors.navyDeep,
+    backgroundColor: DARK.surface,
     overflow: "visible",
     borderBottomLeftRadius: radius.xl,
     borderBottomRightRadius: radius.xl,
     ...shadow.md,
   },
+  heroImageClip: {
+    overflow: "hidden",
+    borderBottomLeftRadius: 100,
+    borderBottomRightRadius: 100,
+  },
   dots: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.06,
-    backgroundColor: colors.navy,
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   heroInner: {
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
-    justifyContent: "flex-end",
+    justifyContent: "center",
   },
   heroTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: spacing.md,
+    marginTop: 60,
   },
   heroEyebrow: {
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.8,
     textTransform: "uppercase",
-    color: "rgba(255,255,255,0.55)",
+    color: DARK.white,
     marginBottom: 3,
   },
   heroTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: colors.white,
-    fontStyle: "italic",
+    color: DARK.white,
     lineHeight: 28,
   },
   heroSub: {
     fontSize: 11,
-    color: "rgba(255,255,255,0.5)",
+    color: DARK.white,
     fontWeight: "600",
     marginTop: 3,
   },
-  editBtnGrad: {
+  editBtn: {
     width: 40,
     height: 40,
     borderRadius: radius.full,
     marginTop: 2,
-    overflow: "hidden",
-    shadowColor: colors.blush,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#000",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
-  editBtn: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
 
   menuOverlay: {
     flex: 1,
-    backgroundColor: "rgba(13,22,38,0.5)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "flex-end",
   },
   menuCard: {
-    backgroundColor: colors.white,
+    backgroundColor: DARK.surface,
     borderRadius: radius.xl,
     marginHorizontal: spacing.lg,
     overflow: "hidden",
@@ -769,15 +824,15 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: "700",
-    color: colors.navy,
+    color: DARK.white,
   },
   menuDivider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: DARK.border,
     marginLeft: spacing.md + 32 + spacing.sm,
   },
   menuCancel: {
-    backgroundColor: colors.white,
+    backgroundColor: DARK.surface,
     borderRadius: radius.xl,
     marginHorizontal: spacing.lg,
     marginTop: spacing.sm,
@@ -788,27 +843,32 @@ const s = StyleSheet.create({
   menuCancelText: {
     fontSize: 14,
     fontWeight: "800",
-    color: colors.accent,
+    color: DARK.pink,
   },
 
   /* countdown */
   cdPill: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: colors.cdBg,
-    borderWidth: 1,
-    borderColor: colors.cdBorder,
+    backgroundColor: DARK.yellow,
     borderRadius: radius.full,
     paddingVertical: 10,
     paddingHorizontal: spacing.sm,
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
+    marginTop: 100,
+    //marginBottom: spacing.md,
+    shadowColor: DARK.yellow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    borderColor: "#000",
+    borderWidth: 3,
+    elevation: 16,
   },
   cdUnit: { flex: 1, alignItems: "center" },
   cdNum: {
     fontSize: 22,
     fontWeight: "900",
-    color: colors.white,
+    color: DARK.ink,
     lineHeight: 24,
   },
   cdLabel: {
@@ -816,12 +876,12 @@ const s = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    color: colors.cdLabel,
+    color: "rgba(10,10,10,0.6)",
     marginTop: 2,
   },
   cdSep: {
     fontSize: 14,
-    color: colors.cdSep,
+    color: "rgba(10,10,10,0.4)",
     paddingBottom: 8,
     paddingHorizontal: 2,
   },
@@ -829,7 +889,7 @@ const s = StyleSheet.create({
   /* sheet */
   sheet: {
     flex: 1,
-    backgroundColor: colors.offwhite,
+    backgroundColor: DARK.bg,
     marginHorizontal: spacing.lg,
   },
   sheetContent: {
@@ -844,7 +904,7 @@ const s = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1.5,
     textTransform: "uppercase",
-    color: colors.muted,
+    color: DARK.muted,
     marginBottom: spacing.sm,
   },
   secRow: {
@@ -853,56 +913,82 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: spacing.sm,
   },
-  sectionAddBtnGrad: {
+  sectionAddBtn: {
     width: 30,
     height: 30,
     borderRadius: radius.full,
-    overflow: "hidden",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  sectionAddBtn: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    ...shadow.sm,
   },
-
 
   /* stats */
   statRow: { flexDirection: "row", gap: 8, marginBottom: spacing.md },
-  statCardGrad: {
-    flex: 1,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 0,
-    overflow: "hidden",
-    ...shadow.sm,
-  },
   statCard: {
     flex: 1,
-    backgroundColor: colors.white,
     borderRadius: radius.lg,
     padding: 10,
     alignItems: "center",
   },
-  statNum: { fontSize: 18, fontWeight: "900", color: colors.navy },
+  statNum: { fontSize: 18, fontWeight: "900", color: DARK.ink },
   statLabel: {
     fontSize: 9,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    color: colors.muted,
+    color: "rgba(10,10,10,0.6)",
     marginTop: 2,
   },
 
+  /* budget card */
+  budgetCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: DARK.surface,
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: DARK.border,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadow.sm,
+  },
+  budgetCardRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    marginBottom: spacing.sm,
+  },
+  budgetCardSpent: { fontSize: 16, fontWeight: "900", color: DARK.white },
+  budgetCardTotal: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: DARK.muted,
+  },
+  budgetTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: DARK.surfaceAlt,
+    overflow: "hidden",
+  },
+  budgetFill: { height: "100%", borderRadius: 3 },
+  budgetCardEmptyRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  budgetCardEmpty: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: DARK.muted,
+  },
+  budgetCardIcon: { width: 34, height: 34 },
+  budgetCardChevron: { marginLeft: spacing.sm },
+
   /* visa warning */
   visaCard: {
-    backgroundColor: colors.warningLight,
+    backgroundColor: "rgba(236,226,46,0.12)",
     borderWidth: 1,
-    borderColor: colors.warningBorder,
+    borderColor: "rgba(236,226,46,0.35)",
     borderRadius: radius.xl,
     padding: spacing.md,
     marginBottom: spacing.md,
@@ -916,32 +1002,29 @@ const s = StyleSheet.create({
   visaTitle: {
     fontSize: 11,
     fontWeight: "800",
-    color: colors.warning,
+    color: DARK.yellow,
     flex: 1,
   },
   visaMsg: {
     fontSize: 11,
     fontWeight: "600",
-    color: colors.warning,
+    color: DARK.yellow,
     marginBottom: 2,
   },
 
   /* card */
-  cardGrad: {
+  card: {
+    backgroundColor: DARK.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-    overflow: "hidden",
-    ...shadow.sm,
-  },
-  card: {
+    borderColor: DARK.border,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
   },
   emptyCheck: {
     fontSize: 12,
-    color: colors.muted,
+    color: DARK.muted,
     fontWeight: "600",
     paddingVertical: spacing.sm,
     textAlign: "center",
@@ -954,7 +1037,7 @@ const s = StyleSheet.create({
     gap: 10,
     paddingVertical: 9,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: DARK.border,
   },
   checkCircleWrap: { flexShrink: 0 },
   checkCircle: {
@@ -962,16 +1045,16 @@ const s = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: DARK.border,
     alignItems: "center",
     justifyContent: "center",
   },
   checkCircleDone: {
-    backgroundColor: colors.teal,
-    borderColor: colors.teal,
+    backgroundColor: DARK.blue,
+    borderColor: DARK.blue,
   },
-  checkText: { flex: 1, fontSize: 12, fontWeight: "700", color: colors.navy },
-  checkTextDone: { color: colors.muted, textDecorationLine: "line-through" },
+  checkText: { flex: 1, fontSize: 12, fontWeight: "700", color: DARK.white },
+  checkTextDone: { color: DARK.muted, textDecorationLine: "line-through" },
   catPill: {
     paddingHorizontal: 7,
     paddingVertical: 2,
@@ -987,39 +1070,37 @@ const s = StyleSheet.create({
     gap: 8,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: DARK.border,
     marginTop: 2,
   },
   addInput: {
     flex: 1,
-    backgroundColor: colors.offwhite,
+    backgroundColor: DARK.surfaceAlt,
     borderRadius: radius.md,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: DARK.border,
     paddingHorizontal: spacing.md,
     paddingVertical: 8,
     fontSize: 13,
     fontWeight: "600",
-    color: colors.navy,
+    color: DARK.white,
   },
-  addBtnGrad: {
+  addBtn: {
     borderRadius: radius.md,
-    overflow: "hidden",
-    shadowColor: colors.blush,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 9,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: DARK.pink,
+    shadowColor: DARK.pink,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 12,
     elevation: 6,
   },
-  addBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 9,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  addBtnText: { fontSize: 12, fontWeight: "800", color: colors.white },
+  addBtnText: { fontSize: 12, fontWeight: "800", color: DARK.ink },
 
-  /* teal highlight */
+  /* teal highlight (não usado no momento — bloco comentado acima) */
   tealCardGrad: {
     borderRadius: radius.xl,
     marginBottom: spacing.md,
@@ -1054,35 +1135,30 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    backgroundColor: colors.white,
+    backgroundColor: DARK.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: DARK.border,
     borderStyle: "dashed",
     padding: spacing.md,
     marginBottom: spacing.md,
-    ...shadow.sm,
   },
   looksEmptyText: {
     flex: 1,
     fontSize: 13,
     fontWeight: "700",
-    color: colors.muted,
+    color: DARK.muted,
   },
 
   /* confirmations */
   confRow: { flexDirection: "row", gap: 8, marginBottom: spacing.md },
-  confCardGrad: {
+  confCard: {
     flex: 1,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
-    overflow: "hidden",
-    ...shadow.sm,
-  },
-  confCard: {
+    borderColor: DARK.border,
     padding: spacing.md,
-    backgroundColor: colors.white,
+    backgroundColor: DARK.surface,
   },
   confLabelRow: {
     flexDirection: "row",
@@ -1095,12 +1171,12 @@ const s = StyleSheet.create({
     fontWeight: "800",
     textTransform: "uppercase",
     letterSpacing: 0.6,
-    color: colors.muted,
+    color: DARK.muted,
   },
-  confValue: { fontSize: 15, fontWeight: "900", color: colors.navy },
+  confValue: { fontSize: 15, fontWeight: "900", color: DARK.white },
   confSub: {
     fontSize: 10,
-    color: colors.muted,
+    color: DARK.muted,
     fontWeight: "600",
     marginTop: 1,
   },

@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
+import { format } from "date-fns";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, {
   useCallback,
   useEffect,
@@ -19,9 +20,13 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { DateCarousel } from "../components/DateCarousel";
+import { useNetworkStatus } from "../hooks/useNetworkStatus";
 import { useTrips } from "../hooks/useTrips";
-import { colors, radius, shadow, spacing } from "../theme";
+import { dark, radius, shadow, spacing } from "../theme";
 import { LookPin } from "../types";
+import { getTripDays, UNASSIGNED_DAY_KEY } from "../utils/dates";
+import { OUTROS_COUNTRY } from "../utils/looks";
 import { pinterestSearchUrl } from "../utils/pinterest";
 import { getDeviceId, uploadImage } from "../utils/supabase";
 import {
@@ -58,7 +63,45 @@ const SKELETON_RATIOS = [1.3, 0.85, 1, 1.2, 0.9, 1.1];
 export default function LooksPickerScreen() {
   const nav = useRouter();
   const insets = useSafeAreaInsets();
-  const { activeTrip, addLooks } = useTrips();
+  const { country: countryParam } = useLocalSearchParams<{
+    country?: string;
+  }>();
+  const country = countryParam || OUTROS_COUNTRY;
+  const { activeTrip, activeLooks, addLooks, removeLook } = useTrips();
+  const isOnline = useNetworkStatus();
+
+  const dayList = useMemo(
+    () => getTripDays(activeTrip?.depart ?? "", activeTrip?.ret ?? ""),
+    [activeTrip?.depart, activeTrip?.ret],
+  );
+  const countryLooks = useMemo(
+    () =>
+      activeLooks.filter(
+        (l: LookPin) => (l.country ?? OUTROS_COUNTRY) === country,
+      ),
+    [activeLooks, country],
+  );
+  const hasUnassigned = countryLooks.some((l: LookPin) => !l.date);
+
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
+
+  // Mesma prioridade do itinerário: prefere o bucket "sem data" quando ele
+  // tem conteúdo (looks salvos antes dessa feature), senão hoje/dia 1.
+  useEffect(() => {
+    if (!activeTrip) return;
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    const fallback = hasUnassigned
+      ? UNASSIGNED_DAY_KEY
+      : (dayList.find((d) => d.key === todayKey)?.key ??
+        dayList[0]?.key ??
+        null);
+    setSelectedDayKey(fallback);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTrip?.id, country]);
+
+  const looksForSelectedDay = countryLooks.filter((l: LookPin) =>
+    selectedDayKey === UNASSIGNED_DAY_KEY ? !l.date : l.date === selectedDayKey,
+  );
 
   const [galleryPicks, setGalleryPicks] = useState<
     { uri: string; id: string }[]
@@ -76,8 +119,8 @@ export default function LooksPickerScreen() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (UNSPLASH_KEY) doSearch(initialQuery);
-  }, [initialQuery]);
+    if (UNSPLASH_KEY && isOnline) doSearch(initialQuery);
+  }, [initialQuery, isOnline]);
 
   const doSearch = async (q: string) => {
     if (!q.trim()) return;
@@ -159,6 +202,11 @@ export default function LooksPickerScreen() {
     if (!totalCount) return;
     setSaving(true);
 
+    const lookDate =
+      selectedDayKey && selectedDayKey !== UNASSIGNED_DAY_KEY
+        ? selectedDayKey
+        : undefined;
+
     const deviceId = await getDeviceId();
     const uploadedGalleryPicks = await Promise.all(
       galleryPicks.map(async (p) => {
@@ -166,7 +214,13 @@ export default function LooksPickerScreen() {
           p.uri,
           `looks/${deviceId}/${p.id}.jpg`,
         );
-        return { id: p.id, tripId: activeTrip?.id ?? "", imageUrl: uploadedUrl ?? p.uri };
+        return {
+          id: p.id,
+          tripId: activeTrip?.id ?? "",
+          imageUrl: uploadedUrl ?? p.uri,
+          country,
+          date: lookDate,
+        };
       }),
     );
 
@@ -176,6 +230,8 @@ export default function LooksPickerScreen() {
         id: photo.id,
         tripId: activeTrip?.id ?? "",
         imageUrl: photo.urls.regular,
+        country,
+        date: lookDate,
       })),
     ];
     await addLooks(newLooks);
@@ -198,7 +254,7 @@ export default function LooksPickerScreen() {
         />
         {isSel && (
           <View style={s.cardOverlay}>
-            <Ionicons name="checkmark-circle" size={28} color={colors.white} />
+            <Ionicons name="checkmark-circle" size={28} color={dark.white} />
           </View>
         )}
       </TouchableOpacity>
@@ -208,29 +264,73 @@ export default function LooksPickerScreen() {
   return (
     <View style={[s.root, { paddingTop: insets.top }]}>
       {/* header */}
+      {/*TO-DO:VER LOOKS ESCOLHIDOS E ESCOLHER SEREM EM ABAS SEPARADAS*/}
       <View style={s.header}>
         <TouchableOpacity
           onPress={() => nav.back()}
           hitSlop={8}
           style={s.backBtn}
         >
-          <Ionicons name="arrow-back" size={20} color={colors.white} />
+          <Ionicons name="arrow-back" size={20} color={dark.white} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>Looks da viagem</Text>
-          {totalCount > 0 && (
-            <Text style={s.headerSub}>
-              {totalCount} look{totalCount !== 1 ? "s" : ""} selecionado
-              {totalCount !== 1 ? "s" : ""}
-            </Text>
-          )}
+          <Text style={s.headerTitle}>{country}</Text>
+          <Text style={s.headerSub}>
+            {totalCount > 0
+              ? `${totalCount} look${totalCount !== 1 ? "s" : ""} selecionado${totalCount !== 1 ? "s" : ""}`
+              : "escolha looks para usar em cada dia da sua viagem"}
+          </Text>
         </View>
       </View>
+
+      <DateCarousel
+        days={dayList}
+        selectedKey={selectedDayKey}
+        onSelect={setSelectedDayKey}
+        hasUnassigned={hasUnassigned}
+        absolute={false}
+        style={s.dateCarousel}
+      />
 
       <ScrollView
         contentContainerStyle={s.content}
         showsVerticalScrollIndicator={false}
       >
+        {/* looks já salvos nesse país/dia */}
+        {looksForSelectedDay.length > 0 && (
+          <View>
+            <Text style={s.sectionLabel}>
+              Salvos neste dia ({looksForSelectedDay.length})
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={s.trayRow}
+            >
+              {looksForSelectedDay.map((look: LookPin) => (
+                <View key={look.id} style={s.trayThumb}>
+                  <Image
+                    source={{ uri: look.imageUrl }}
+                    style={s.cardImg}
+                    contentFit="cover"
+                  />
+                  <TouchableOpacity
+                    style={s.trayRemove}
+                    onPress={() => removeLook(look.id)}
+                    hitSlop={4}
+                  >
+                    <Ionicons
+                      name="close-circle"
+                      size={18}
+                      color={dark.white}
+                    />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         {/* quick actions */}
         <View style={s.quickRow}>
           <TouchableOpacity
@@ -238,7 +338,10 @@ export default function LooksPickerScreen() {
             onPress={pickFromGallery}
             activeOpacity={0.85}
           >
-            <Ionicons name="images-outline" size={16} color={colors.navy} />
+            <Image
+              source={require("../assets/images/icon-gallery.png")}
+              style={{ width: 24, height: 24 }}
+            />
             <Text style={s.chipText}>Galeria</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -246,7 +349,10 @@ export default function LooksPickerScreen() {
             onPress={openPinterest}
             activeOpacity={0.85}
           >
-            <Ionicons name="logo-pinterest" size={16} color="#E60023" />
+            <Image
+              source={require("../assets/images/icon-pinterest.png")}
+              style={{ width: 24, height: 24 }}
+            />
             <Text style={s.chipText}>Pinterest</Text>
           </TouchableOpacity>
         </View>
@@ -275,7 +381,7 @@ export default function LooksPickerScreen() {
                     <Ionicons
                       name="close-circle"
                       size={18}
-                      color={colors.white}
+                      color={dark.white}
                     />
                   </TouchableOpacity>
                 </View>
@@ -295,7 +401,7 @@ export default function LooksPickerScreen() {
                     <Ionicons
                       name="close-circle"
                       size={18}
-                      color={colors.white}
+                      color={dark.white}
                     />
                   </TouchableOpacity>
                 </View>
@@ -305,11 +411,23 @@ export default function LooksPickerScreen() {
         )}
 
         {/* search */}
-        {UNSPLASH_KEY ? (
+        {!isOnline ? (
+          <View style={s.offlineInfoBox}>
+            <Ionicons
+              name="cloud-offline-outline"
+              size={16}
+              color={dark.yellow}
+            />
+            <Text style={s.offlineInfoText}>
+              Você está sem internet — busca de novas inspirações indisponível.
+              Os looks já salvos continuam aqui em cima.
+            </Text>
+          </View>
+        ) : UNSPLASH_KEY ? (
           <>
             <Text style={s.sectionLabel}>Inspirações para o destino</Text>
             <View style={s.searchWrap}>
-              <Ionicons name="search" size={16} color={colors.muted} />
+              <Ionicons name="search" size={16} color={dark.muted} />
               <TextInput
                 style={s.searchInput}
                 value={query}
@@ -317,7 +435,7 @@ export default function LooksPickerScreen() {
                 onSubmitEditing={() => doSearch(query)}
                 returnKeyType="search"
                 placeholder="Buscar inspiração de look..."
-                placeholderTextColor={colors.muted}
+                placeholderTextColor={dark.muted}
               />
               {query.length > 0 && (
                 <TouchableOpacity
@@ -327,11 +445,7 @@ export default function LooksPickerScreen() {
                   }}
                   hitSlop={8}
                 >
-                  <Ionicons
-                    name="close-circle"
-                    size={16}
-                    color={colors.muted}
-                  />
+                  <Ionicons name="close-circle" size={16} color={dark.muted} />
                 </TouchableOpacity>
               )}
             </View>
@@ -375,10 +489,9 @@ export default function LooksPickerScreen() {
           </>
         ) : (
           <View style={s.infoBox}>
-            <Ionicons
-              name="information-circle-outline"
-              size={16}
-              color={colors.teal2}
+            <Image
+              source={require("../assets/images/icon-info.png")}
+              style={{ width: 18, height: 18 }}
             />
             <Text style={s.infoText}>
               Adicione ao <Text style={{ fontWeight: "900" }}>.env</Text>:{"\n"}
@@ -405,7 +518,7 @@ export default function LooksPickerScreen() {
             activeOpacity={0.85}
           >
             <Text style={s.saveBtnText}>Salvar</Text>
-            <Ionicons name="checkmark" size={16} color={colors.white} />
+            <Ionicons name="checkmark" size={16} color={dark.ink} />
           </TouchableOpacity>
         </View>
       )}
@@ -416,13 +529,13 @@ export default function LooksPickerScreen() {
 const TRAY_THUMB = 64;
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.offwhite },
+  root: { flex: 1, backgroundColor: dark.bg },
 
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    backgroundColor: colors.navy,
+    backgroundColor: dark.surface,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },
@@ -430,14 +543,19 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: "800",
-    color: colors.white,
-    fontStyle: "italic",
+    color: dark.white,
   },
   headerSub: {
     fontSize: 10,
     color: "rgba(255,255,255,0.55)",
-    fontWeight: "600",
+    //fontWeight: "600",
     marginTop: 1,
+  },
+
+  dateCarousel: {
+    backgroundColor: dark.surface,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
   },
 
   content: { padding: spacing.lg, gap: spacing.md },
@@ -449,21 +567,21 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: colors.white,
+    backgroundColor: dark.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: dark.border,
     borderRadius: radius.full,
     paddingVertical: 10,
     ...shadow.sm,
   },
-  chipText: { fontSize: 13, fontWeight: "800", color: colors.navy },
+  chipText: { fontSize: 13, fontWeight: "800", color: dark.white },
 
   sectionLabel: {
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1.4,
     textTransform: "uppercase",
-    color: colors.muted,
+    color: dark.muted,
     marginBottom: spacing.sm,
   },
 
@@ -473,7 +591,7 @@ const s = StyleSheet.create({
     height: TRAY_THUMB,
     borderRadius: radius.md,
     overflow: "hidden",
-    backgroundColor: colors.border,
+    backgroundColor: dark.surfaceAlt,
     ...shadow.sm,
   },
   trayRemove: {
@@ -488,30 +606,30 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    backgroundColor: colors.white,
+    backgroundColor: dark.surfaceAlt,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: dark.border,
     paddingHorizontal: spacing.md,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
     fontWeight: "700",
-    color: colors.navy,
+    color: dark.white,
     paddingVertical: 10,
   },
 
   errorText: {
     fontSize: 13,
-    color: colors.accent,
+    color: dark.pink,
     fontWeight: "600",
     textAlign: "center",
     paddingVertical: spacing.lg,
   },
   emptyText: {
     fontSize: 13,
-    color: colors.muted,
+    color: dark.muted,
     fontWeight: "600",
     textAlign: "center",
     paddingVertical: spacing.lg,
@@ -521,13 +639,28 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
-    backgroundColor: colors.tealLight,
+    backgroundColor: "rgba(69,144,248,0.15)",
     borderRadius: radius.lg,
     padding: spacing.md,
   },
   infoText: {
     fontSize: 12,
-    color: colors.teal2,
+    color: dark.blue,
+    fontWeight: "600",
+    flex: 1,
+    lineHeight: 19,
+  },
+  offlineInfoBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: "rgba(236,226,46,0.12)",
+    borderRadius: radius.lg,
+    padding: spacing.md,
+  },
+  offlineInfoText: {
+    fontSize: 12,
+    color: dark.yellow,
     fontWeight: "600",
     flex: 1,
     lineHeight: 19,
@@ -538,19 +671,19 @@ const s = StyleSheet.create({
   masonryCard: {
     borderRadius: radius.lg,
     overflow: "hidden",
-    backgroundColor: colors.border,
+    backgroundColor: dark.surfaceAlt,
     ...shadow.sm,
   },
   cardImg: { ...StyleSheet.absoluteFillObject },
   cardOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(59,191,178,0.5)",
+    backgroundColor: "rgba(69,144,248,0.5)",
     alignItems: "center",
     justifyContent: "center",
   },
   skeleton: {
     borderRadius: radius.lg,
-    backgroundColor: colors.border,
+    backgroundColor: dark.surfaceAlt,
     opacity: 0.6,
   },
 
@@ -558,23 +691,23 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: colors.white,
+    backgroundColor: dark.surface,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: dark.border,
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     ...shadow.md,
   },
-  saveCount: { fontSize: 13, fontWeight: "700", color: colors.navy },
+  saveCount: { fontSize: 13, fontWeight: "700", color: dark.white },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: colors.teal,
+    backgroundColor: dark.blue,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.lg,
     paddingVertical: 11,
     ...shadow.teal,
   },
-  saveBtnText: { fontSize: 13, fontWeight: "800", color: colors.white },
+  saveBtnText: { fontSize: 13, fontWeight: "800", color: dark.ink },
 });

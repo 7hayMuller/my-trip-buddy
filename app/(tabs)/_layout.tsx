@@ -1,19 +1,18 @@
-import { useTrips } from "@/hooks/useTrips";
-import { colors } from "@/theme";
-import { Ionicons } from "@expo/vector-icons";
+import { dark as DARK } from "@/theme";
 import { Tabs } from "expo-router";
+import { Image } from "react-native";
+
+const TAB_ICON_SIZE = 30;
 
 export default function TabLayout() {
-  const { activeTrips } = useTrips();
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.teal,
-        tabBarInactiveTintColor: colors.muted,
+        tabBarInactiveTintColor: DARK.muted,
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.navy,
-          borderTopColor: colors.offwhite,
+          backgroundColor: DARK.bg,
+          borderTopColor: DARK.border,
           height: 100,
           paddingBottom: 5,
           //tdisplay: activeTrips ? "flex" : "none",
@@ -24,8 +23,12 @@ export default function TabLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="home" size={24} color={color} />
+          tabBarActiveTintColor: DARK.blue,
+          tabBarIcon: () => (
+            <Image
+              source={require("../../assets/images/icon-home.png")}
+              style={{ width: TAB_ICON_SIZE, height: TAB_ICON_SIZE }}
+            />
           ),
         }}
       />
@@ -33,8 +36,12 @@ export default function TabLayout() {
         name="trips"
         options={{
           title: "Viagens",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="briefcase" size={24} color={color} />
+          tabBarActiveTintColor: DARK.green,
+          tabBarIcon: () => (
+            <Image
+              source={require("../../assets/images/icon-airport.png")}
+              style={{ width: TAB_ICON_SIZE, height: TAB_ICON_SIZE }}
+            />
           ),
         }}
       />
@@ -42,8 +49,12 @@ export default function TabLayout() {
         name="itinerary"
         options={{
           title: "Itinerário",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="map" size={24} color={color} />
+          tabBarActiveTintColor: DARK.pink,
+          tabBarIcon: () => (
+            <Image
+              source={require("../../assets/images/icon-country.png")}
+              style={{ width: TAB_ICON_SIZE, height: TAB_ICON_SIZE }}
+            />
           ),
         }}
       />
@@ -51,8 +62,12 @@ export default function TabLayout() {
         name="looks"
         options={{
           title: "Looks",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="shirt" size={24} color={color} />
+          tabBarActiveTintColor: DARK.yellow,
+          tabBarIcon: () => (
+            <Image
+              source={require("../../assets/images/icon-tshirt.png")}
+              style={{ width: TAB_ICON_SIZE, height: TAB_ICON_SIZE }}
+            />
           ),
         }}
       />
@@ -60,8 +75,12 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: "Perfil",
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="person" size={24} color={color} />
+          tabBarActiveTintColor: DARK.blue,
+          tabBarIcon: () => (
+            <Image
+              source={require("../../assets/images/icon-profile.png")}
+              style={{ width: TAB_ICON_SIZE, height: TAB_ICON_SIZE }}
+            />
           ),
         }}
       />

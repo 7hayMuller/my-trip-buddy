@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ResizeMode, Video } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -7,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Image,
   Platform,
   StyleSheet,
   Text,
@@ -15,9 +15,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import MyTripBuddyLogo from "../components/MyTripBuddyLogo";
 import { useAuth } from "../hooks/useAuth";
-import { colors, radius, spacing } from "../theme";
+import { dark, radius, spacing } from "../theme";
 
 export default function LoginScreen() {
   const nav = useRouter();
@@ -98,7 +97,7 @@ export default function LoginScreen() {
 
   return (
     <View style={s.root}>
-      <Video
+      {/* <Video
         source={require("../assets/videos/boarding_loop.mp4")}
         rate={1.0}
         volume={0}
@@ -107,48 +106,31 @@ export default function LoginScreen() {
         shouldPlay
         isLooping
         style={StyleSheet.absoluteFill}
-      />
+      /> */}
       <LinearGradient
-        colors={[
-          "rgba(17,30,53,0.3)",
-          "rgba(17,30,53,0.5)",
-          "rgba(17,30,53,0.75)",
-        ]}
+        colors={["rgba(5,5,5,0.4)", "rgba(5,5,5,0.6)", "rgba(5,5,5,0.8)"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={StyleSheet.absoluteFillObject}
       />
 
       <View style={[s.content, { paddingTop: insets.top }]}>
-        <View style={s.header}>
-          <MyTripBuddyLogo
-            size={280}
-            ink={colors.white}
-            accent={colors.blush}
-          />
-          <Text style={s.subtitle}>
-            Do intinerário aos looks , organize suas viagens de maneira fácil e
-            divertida!
-          </Text>
-        </View>
-
-        {/* <View style={s.features}>
-          <FeatureItem
-            icon="checkmark-circle"
-            title="Checklist Inteligente"
-            description="Organize tudo que precisa fazer"
-          />
-          <FeatureItem
-            icon="image"
-            title="Looks & Inspiração"
-            description="Salve seus looks do Pinterest"
-          />
-          <FeatureItem
-            icon="map"
-            title="Mapa de Destinos"
-            description="Explore lugares para visitar"
-          />
-        </View>*/}
+        <Image
+          source={require("../assets/images/splash-icon.png")}
+          style={{
+            width: 200,
+            height: 200,
+          }}
+        />
+        <Image
+          source={require("../assets/images/buddy-logo.png")}
+          style={{
+            width: 300,
+            height: 300,
+            marginTop: -50,
+            marginLeft: 50,
+          }}
+        />
       </View>
 
       <View style={[s.footer, { paddingBottom: insets.bottom + spacing.lg }]}>
@@ -163,9 +145,13 @@ export default function LoginScreen() {
                   activeOpacity={0.85}
                 >
                   {googleLoading ? (
-                    <ActivityIndicator color={colors.white} size="small" />
+                    <ActivityIndicator color={dark.white} size="small" />
                   ) : (
                     <>
+                      <Image
+                        source={require("../assets/images/icon-gmail.png")}
+                        style={{ width: 22, height: 22 }}
+                      />
                       <Text style={s.googleBtnText}>Continuar com Google</Text>
                     </>
                   )}
@@ -187,7 +173,7 @@ export default function LoginScreen() {
                 value={email}
                 onChangeText={setEmail}
                 editable={!loading}
-                placeholderTextColor={colors.muted}
+                placeholderTextColor={dark.muted}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
@@ -199,25 +185,27 @@ export default function LoginScreen() {
               disabled={loading || !email.trim()}
               activeOpacity={0.85}
             >
-              <LinearGradient
-                colors={
-                  loading || !email.trim()
-                    ? [colors.border, colors.border]
-                    : [colors.gradStart, colors.gradMid, colors.gradEnd]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={s.buttonGrad}
+              <View
+                style={[
+                  s.buttonGrad,
+                  {
+                    backgroundColor:
+                      loading || !email.trim() ? dark.border : dark.lime,
+                  },
+                ]}
               >
                 {loading ? (
-                  <ActivityIndicator color={colors.white} size="small" />
+                  <ActivityIndicator color={dark.ink} size="small" />
                 ) : (
                   <>
-                    <Ionicons name="mail" size={20} color={colors.white} />
+                    <Image
+                      source={require("../assets/images/icon-mail.png")}
+                      style={{ width: 24, height: 24 }}
+                    />
                     <Text style={s.buttonText}>Enviar link de acesso</Text>
                   </>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
 
             <Text style={s.terms}>
@@ -239,7 +227,7 @@ export default function LoginScreen() {
                 value={code}
                 onChangeText={setCode}
                 editable={!loading}
-                placeholderTextColor={colors.muted}
+                placeholderTextColor={dark.muted}
                 keyboardType="number-pad"
                 maxLength={6}
               />
@@ -251,25 +239,24 @@ export default function LoginScreen() {
               disabled={loading || !code.trim()}
               activeOpacity={0.85}
             >
-              <LinearGradient
-                colors={
-                  loading || !code.trim()
-                    ? [colors.border, colors.border]
-                    : [colors.blush, "#D4697B"]
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={s.buttonGrad}
+              <View
+                style={[
+                  s.buttonGrad,
+                  {
+                    backgroundColor:
+                      loading || !code.trim() ? dark.border : dark.lime,
+                  },
+                ]}
               >
                 {loading ? (
-                  <ActivityIndicator color={colors.white} size="small" />
+                  <ActivityIndicator color={dark.ink} size="small" />
                 ) : (
                   <>
-                    <Ionicons name="checkmark" size={20} color={colors.white} />
+                    <Ionicons name="checkmark" size={20} color={dark.ink} />
                     <Text style={s.buttonText}>Verificar código</Text>
                   </>
                 )}
-              </LinearGradient>
+              </View>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -283,28 +270,6 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </>
         )}
-      </View>
-    </View>
-  );
-}
-
-function FeatureItem({
-  icon,
-  title,
-  description,
-}: {
-  icon: string;
-  title: string;
-  description: string;
-}) {
-  return (
-    <View style={s.featureItem}>
-      <View style={s.featureIcon}>
-        <Ionicons name={icon as any} size={24} color={colors.blush} />
-      </View>
-      <View style={s.featureText}>
-        <Text style={s.featureTitle}>{title}</Text>
-        <Text style={s.featureDesc}>{description}</Text>
       </View>
     </View>
   );
@@ -330,11 +295,11 @@ const s = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: colors.blush,
+    backgroundColor: dark.pink,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: spacing.lg,
-    shadowColor: colors.blush,
+    shadowColor: dark.pink,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
@@ -344,7 +309,7 @@ const s = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: "900",
-    color: colors.white,
+    color: dark.white,
     marginBottom: spacing.sm,
     textAlign: "center",
   },
@@ -364,14 +329,14 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    backgroundColor: colors.white,
+    backgroundColor: dark.surface,
     borderRadius: radius.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.navy,
+    borderColor: dark.border,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,
   },
@@ -380,7 +345,7 @@ const s = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radius.lg,
-    backgroundColor: colors.blushLight,
+    backgroundColor: "rgba(236,107,163,0.15)",
     justifyContent: "center",
     alignItems: "center",
     flexShrink: 0,
@@ -393,13 +358,13 @@ const s = StyleSheet.create({
   featureTitle: {
     fontSize: 13,
     fontWeight: "800",
-    color: colors.navy,
+    color: dark.white,
     marginBottom: 2,
   },
 
   featureDesc: {
     fontSize: 12,
-    color: colors.muted,
+    color: dark.muted,
     fontWeight: "500",
   },
 
@@ -411,26 +376,26 @@ const s = StyleSheet.create({
   inputLabel: {
     fontSize: 13,
     fontWeight: "700",
-    color: colors.white,
+    color: dark.white,
     marginBottom: spacing.sm,
   },
 
   input: {
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: dark.border,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     fontSize: 15,
-    color: colors.navy,
+    color: dark.white,
     marginBottom: spacing.md,
-    backgroundColor: colors.white,
+    backgroundColor: dark.surfaceAlt,
   },
 
   button: {
     borderRadius: radius.lg,
     overflow: "hidden",
-    shadowColor: colors.gradMid,
+    shadowColor: dark.lime,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -454,19 +419,19 @@ const s = StyleSheet.create({
   buttonText: {
     fontSize: 15,
     fontWeight: "800",
-    color: colors.white,
+    color: dark.ink,
   },
 
   terms: {
     fontSize: 11,
-    color: "rgba(255,255,255,0.75)",
+    color: dark.blue,
     textAlign: "center",
     fontWeight: "500",
     lineHeight: 16,
   },
 
   termsLink: {
-    color: colors.white,
+    color: dark.white,
     fontWeight: "700",
     textDecorationLine: "underline",
   },
@@ -474,7 +439,7 @@ const s = StyleSheet.create({
   sentTitle: {
     fontSize: 18,
     fontWeight: "800",
-    color: colors.white,
+    color: dark.white,
     textAlign: "center",
     marginBottom: spacing.sm,
   },
@@ -489,7 +454,7 @@ const s = StyleSheet.create({
 
   changeEmail: {
     fontSize: 13,
-    color: colors.blush,
+    color: dark.pink,
     textAlign: "center",
     fontWeight: "700",
     marginTop: spacing.md,
@@ -512,23 +477,10 @@ const s = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  googleLogo: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.white,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  googleLogoText: {
-    fontSize: 13,
-    fontWeight: "900",
-    color: "#EA4335",
-  },
   googleBtnText: {
     fontSize: 14,
     fontWeight: "700",
-    color: colors.white,
+    color: dark.white,
   },
 
   orRow: {
@@ -539,12 +491,12 @@ const s = StyleSheet.create({
   orLine: {
     flex: 1,
     height: 1,
-    backgroundColor: "rgba(255,255,255,0.3)",
+    backgroundColor: dark.lime,
   },
   orText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "rgba(255,255,255,0.75)",
+    color: dark.pink,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },

@@ -1,20 +1,25 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
 import {
+  Alert,
+  Image,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../hooks/useAuth";
-import { colors, spacing, radius } from "../../theme";
+import { useTrips } from "../../hooks/useTrips";
+import { dark, radius, spacing } from "../../theme";
+import { Milestone, MILESTONES } from "../../utils/notifications";
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
+  const { notifSettings, toggleNotifMilestone } = useTrips();
   const nav = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -23,28 +28,39 @@ export default function ProfileScreen() {
     nav.replace("/login");
   };
 
+  const handleToggleMilestone = async (milestone: Milestone) => {
+    const result = await toggleNotifMilestone(milestone);
+    if (!result?.granted) {
+      Alert.alert(
+        "Permissão necessária",
+        "Ative as notificações para este app nas configurações do celular pra receber os avisos de contagem regressiva.",
+      );
+    }
+  };
+
   return (
-    <View style={{ flex: 1, backgroundColor: colors.offwhite }}>
+    <View style={{ flex: 1, backgroundColor: dark.bg }}>
       <ScrollView
         style={s.container}
-        contentContainerStyle={[s.content, { paddingTop: insets.top + spacing.lg }]}
+        contentContainerStyle={[
+          s.content,
+          { paddingTop: insets.top + spacing.lg },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
         <View style={s.header}>
-          <Text style={s.title}>Meu Perfil</Text>
+          <Text style={s.title}>meu perfil</Text>
         </View>
 
         {/* User Info Card */}
-        <LinearGradient
-          colors={[colors.blushLight, colors.accentLight]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={s.userCard}
-        >
+        <View style={s.userCard}>
           <View style={s.avatarContainer}>
             <View style={s.avatar}>
-              <Ionicons name="person" size={48} color={colors.white} />
+              <Image
+                source={require("../../assets/images/icon-profile.png")}
+                style={s.avatarIcon}
+              />
             </View>
           </View>
 
@@ -53,47 +69,75 @@ export default function ProfileScreen() {
               {user?.user_metadata?.name || "Usuário"}
             </Text>
             <Text style={s.userEmail}>{user?.email || ""}</Text>
-            <View style={s.badgeContainer}>
+            {/* <View style={s.badgeContainer}>
               <View style={s.badge}>
-                <Ionicons name="checkmark-circle" size={14} color={colors.green} />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={14}
+                  color={dark.green}
+                />
                 <Text style={s.badgeText}>Verificado</Text>
               </View>
-            </View>
+            </View> */}
           </View>
-        </LinearGradient>
+        </View>
 
         {/* Stats */}
-        <View style={s.statsContainer}>
-          <StatCard icon="airplane" label="Viagens" value="0" />
-          <StatCard icon="checklist" label="Tarefas" value="0" />
-          <StatCard icon="heart" label="Favoritados" value="0" />
-        </View>
+        {/* <View style={s.statsContainer}>
+          <StatCard icon="airplane" label="Viagens" value="0" color={dark.green} />
+          <StatCard icon="checklist" label="Tarefas" value="0" color={dark.blue} />
+          <StatCard icon="heart" label="Favoritados" value="0" color={dark.pink} />
+        </View> */}
 
         {/* Settings Section */}
         <Text style={s.sectionLabel}>Configurações</Text>
 
-        <TouchableOpacity style={s.settingItem} activeOpacity={0.7}>
-          <View style={s.settingIcon}>
-            <Ionicons name="notifications-outline" size={20} color={colors.navy} />
+        <View style={s.notifCard}>
+          <View style={s.notifHeader}>
+            <View style={s.settingIcon}>
+              <Ionicons
+                name="notifications-outline"
+                size={20}
+                color={dark.white}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.settingText}>Notificações</Text>
+              <Text style={s.notifHint}>
+                avisos de contagem regressiva da sua próxima viagem
+              </Text>
+            </View>
           </View>
-          <Text style={s.settingText}>Notificações</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-        </TouchableOpacity>
+
+          {MILESTONES.map((m) => (
+            <View key={m} style={s.notifRow}>
+              <Text style={s.notifRowText}>
+                {m === 1 ? "1 dia antes (amanhã)" : `${m} dias antes`}
+              </Text>
+              <Switch
+                value={!!notifSettings?.[m]}
+                onValueChange={() => handleToggleMilestone(m)}
+                trackColor={{ false: dark.surfaceAlt, true: dark.blue }}
+                thumbColor={dark.white}
+              />
+            </View>
+          ))}
+        </View>
 
         <TouchableOpacity style={s.settingItem} activeOpacity={0.7}>
           <View style={s.settingIcon}>
-            <Ionicons name="lock-closed-outline" size={20} color={colors.navy} />
+            <Ionicons name="lock-closed-outline" size={20} color={dark.white} />
           </View>
           <Text style={s.settingText}>Privacidade</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          <Ionicons name="chevron-forward" size={18} color={dark.muted} />
         </TouchableOpacity>
 
         <TouchableOpacity style={s.settingItem} activeOpacity={0.7}>
           <View style={s.settingIcon}>
-            <Ionicons name="help-circle-outline" size={20} color={colors.navy} />
+            <Ionicons name="help-circle-outline" size={20} color={dark.white} />
           </View>
           <Text style={s.settingText}>Ajuda & Suporte</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          <Ionicons name="chevron-forward" size={18} color={dark.muted} />
         </TouchableOpacity>
 
         {/* Logout Button */}
@@ -103,15 +147,11 @@ export default function ProfileScreen() {
             onPress={handleLogout}
             activeOpacity={0.85}
           >
-            <LinearGradient
-              colors={["#FF6B6B", "#FF5252"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={s.logoutGrad}
-            >
-              <Ionicons name="log-out-outline" size={18} color={colors.white} />
-              <Text style={s.logoutText}>Sair da Conta</Text>
-            </LinearGradient>
+            <Image
+              source={require("../../assets/images/icon-logout.png")}
+              style={{ width: 22, height: 22 }}
+            />
+            <Text style={s.logoutText}>Sair da Conta</Text>
           </TouchableOpacity>
         </View>
 
@@ -121,28 +161,30 @@ export default function ProfileScreen() {
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <View style={s.statCard}>
-      <Ionicons name={icon as any} size={24} color={colors.blush} />
-      <Text style={s.statValue}>{value}</Text>
-      <Text style={s.statLabel}>{label}</Text>
-    </View>
-  );
-}
+// function StatCard({
+//   icon,
+//   label,
+//   value,
+//   color,
+// }: {
+//   icon: string;
+//   label: string;
+//   value: string;
+//   color: string;
+// }) {
+//   return (
+//     <View style={s.statCard}>
+//       <Ionicons name={icon as any} size={24} color={color} />
+//       <Text style={s.statValue}>{value}</Text>
+//       <Text style={s.statLabel}>{label}</Text>
+//     </View>
+//   );
+// }
 
 const s = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.offwhite,
+    backgroundColor: dark.bg,
   },
 
   content: {
@@ -157,14 +199,15 @@ const s = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "900",
-    color: colors.navy,
+    color: dark.white,
   },
 
   userCard: {
     borderRadius: radius.xl,
     padding: spacing.lg,
     marginBottom: spacing.xl,
-    shadowColor: colors.blush,
+    backgroundColor: dark.lime,
+    shadowColor: dark.blue,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -180,10 +223,12 @@ const s = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: colors.blush,
+    backgroundColor: "rgba(0,0,0,0.2)",
     justifyContent: "center",
     alignItems: "center",
   },
+
+  avatarIcon: { width: 64, height: 64 },
 
   userInfo: {
     alignItems: "center",
@@ -192,13 +237,13 @@ const s = StyleSheet.create({
   userName: {
     fontSize: 18,
     fontWeight: "800",
-    color: colors.navy,
+    color: dark.ink,
     marginBottom: spacing.xs,
   },
 
   userEmail: {
     fontSize: 13,
-    color: colors.muted,
+    color: "rgba(10,10,10,0.6)",
     fontWeight: "600",
     marginBottom: spacing.md,
   },
@@ -212,7 +257,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "rgba(15, 110, 86, 0.1)",
+    backgroundColor: "rgba(0,0,0,0.15)",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
@@ -221,7 +266,7 @@ const s = StyleSheet.create({
   badgeText: {
     fontSize: 12,
     fontWeight: "700",
-    color: colors.green,
+    color: dark.green,
   },
 
   statsContainer: {
@@ -232,30 +277,25 @@ const s = StyleSheet.create({
 
   statCard: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: dark.surface,
     borderRadius: radius.lg,
     padding: spacing.md,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: colors.border,
-    shadowColor: colors.navy,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: dark.border,
   },
 
   statValue: {
     fontSize: 18,
     fontWeight: "900",
-    color: colors.navy,
+    color: dark.white,
     marginVertical: spacing.xs,
   },
 
   statLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: colors.muted,
+    color: dark.muted,
     textAlign: "center",
   },
 
@@ -264,7 +304,7 @@ const s = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: colors.muted,
+    color: dark.muted,
     marginBottom: spacing.sm,
   },
 
@@ -272,19 +312,53 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.md,
-    backgroundColor: colors.white,
+    backgroundColor: dark.surface,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: dark.border,
+  },
+
+  notifCard: {
+    backgroundColor: dark.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: dark.border,
+  },
+  notifHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+  notifHint: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: dark.muted,
+    marginTop: 2,
+  },
+  notifRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: dark.border,
+  },
+  notifRowText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: dark.white,
   },
 
   settingIcon: {
     width: 40,
     height: 40,
     borderRadius: radius.md,
-    backgroundColor: colors.offwhite,
+    backgroundColor: dark.surfaceAlt,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -293,7 +367,7 @@ const s = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     fontWeight: "700",
-    color: colors.navy,
+    color: dark.white,
   },
 
   logoutContainer: {
@@ -301,27 +375,24 @@ const s = StyleSheet.create({
   },
 
   logoutButton: {
-    borderRadius: radius.lg,
-    overflow: "hidden",
-    shadowColor: "#FF6B6B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-
-  logoutGrad: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.md,
     paddingVertical: 14,
     paddingHorizontal: spacing.lg,
+    borderRadius: radius.lg,
+    backgroundColor: "#FF5252",
+    shadowColor: "#FF5252",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 8,
   },
 
   logoutText: {
     fontSize: 15,
     fontWeight: "800",
-    color: colors.white,
+    color: dark.white,
   },
 });

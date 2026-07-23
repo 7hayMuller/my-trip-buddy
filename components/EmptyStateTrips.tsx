@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { colors, spacing } from "../theme";
+import { dark, spacing } from "../theme";
 
 export function EmptyStateTrips() {
   const nav = useRouter();
@@ -88,9 +88,9 @@ export function EmptyStateTrips() {
       />
       <LinearGradient
         colors={[
-          "rgba(17,30,53,0.3)",
-          "rgba(17,30,53,0.5)",
-          "rgba(17,30,53,0.7)",
+          "rgba(5,5,5,0.4)",
+          "rgba(5,5,5,0.6)",
+          "rgba(5,5,5,0.85)",
         ]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -110,28 +110,18 @@ export function EmptyStateTrips() {
             <Animated.View
               style={[s.featureItem, createFeatureAnimStyle(feature1Anim)]}
             >
-              <LinearGradient
-                colors={[colors.purple, colors.blush]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={s.featureBadge}
-              >
-                <Ionicons name="checkmark" size={16} color={colors.white} />
-              </LinearGradient>
+              <View style={[s.featureBadge, { backgroundColor: dark.green }]}>
+                <Ionicons name="checkmark" size={16} color={dark.ink} />
+              </View>
               <Text style={s.featureText}>Crie um checklist personalizado</Text>
             </Animated.View>
 
             <Animated.View
               style={[s.featureItem, createFeatureAnimStyle(feature2Anim)]}
             >
-              <LinearGradient
-                colors={[colors.sage, colors.teal]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={s.featureBadge}
-              >
-                <Ionicons name="image" size={16} color={colors.white} />
-              </LinearGradient>
+              <View style={[s.featureBadge, { backgroundColor: dark.pink }]}>
+                <Ionicons name="image" size={16} color={dark.ink} />
+              </View>
               <Text style={s.featureText}>
                 Escolha seus looks para a viagem
               </Text>
@@ -140,14 +130,9 @@ export function EmptyStateTrips() {
             <Animated.View
               style={[s.featureItem, createFeatureAnimStyle(feature3Anim)]}
             >
-              <LinearGradient
-                colors={[colors.gold, colors.accent]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={s.featureBadge}
-              >
-                <Ionicons name="map" size={16} color={colors.white} />
-              </LinearGradient>
+              <View style={[s.featureBadge, { backgroundColor: dark.blue }]}>
+                <Ionicons name="map" size={16} color={dark.ink} />
+              </View>
               <Text style={s.featureText}>Separe os pontos de visitação</Text>
             </Animated.View>
           </View>
@@ -155,17 +140,10 @@ export function EmptyStateTrips() {
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => nav.push("/trip-form")}
-            style={s.buttonWrapper}
+            style={[s.buttonWrapper, s.button, { backgroundColor: dark.pink }]}
           >
-            <LinearGradient
-              colors={[colors.blush, colors.accent]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={s.button}
-            >
-              <Text style={s.buttonText}>Organizar minha viagem agora</Text>
-              <Ionicons name="arrow-forward" size={18} color={colors.white} />
-            </LinearGradient>
+            <Text style={s.buttonText}>Organizar minha viagem agora</Text>
+            <Ionicons name="arrow-forward" size={18} color={dark.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -196,7 +174,7 @@ const s = StyleSheet.create({
     borderRadius: 60,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: colors.blush,
+    shadowColor: dark.pink,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
@@ -261,7 +239,7 @@ const s = StyleSheet.create({
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.xl,
     borderRadius: 20,
-    shadowColor: colors.blush,
+    shadowColor: dark.pink,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 16,
@@ -270,7 +248,7 @@ const s = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: "800",
-    color: colors.white,
+    color: dark.ink,
   },
   secondaryCTA: {
     fontSize: 14,

@@ -1,7 +1,7 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { colors } from "../theme";
+import { dark } from "../theme";
 
 interface CloudDividerProps {
   color?: string;
@@ -14,7 +14,7 @@ interface CloudDividerProps {
  * The path produces a chunky cloud silhouette — fewer bumps, more voluminous.
  */
 export default function CloudDivider({
-  color = colors.offwhite,
+  color = dark.bg,
   width = 390,
 }: CloudDividerProps) {
   const h = 72; // height of the SVG / cloud area

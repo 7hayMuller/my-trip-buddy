@@ -1,38 +1,110 @@
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { format } from "date-fns";
 import { useRouter } from "expo-router";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  ImageBackground,
+  Alert,
+  Image,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { DateCarousel } from "../../components/DateCarousel";
 import { DestinationMap } from "../../components/DestinationMap";
+import { DestinationSearch } from "../../components/DestinationSearch";
+import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 import { useTrips } from "../../hooks/useTrips";
-import {
-  colors,
-  getDestinationsImage,
-  radius,
-  shadow,
-  spacing,
-} from "../../theme";
-import { colorForCountry } from "../../utils/geo";
+import { dark, radius, shadow, spacing } from "../../theme";
+import { FlightEntry } from "../../types";
+import { getTripDays, UNASSIGNED_DAY_KEY } from "../../utils/dates";
 import { searchPlaces } from "../../utils/geocode";
+
+const CAROUSEL_TOP_GAP = 12;
+const SHEET_COLLAPSED_HEIGHT = 140;
+const SHEET_EXPANDED_RATIO = 0.55;
+
+type DestinationGroup = { country: string | null; items: string[] };
+
+// Compartilhado entre o modo online (dentro do BottomSheet, com mapa) e o
+// offline (lista cheia, sem mapa) — mesma linha de destino nos dois.
+function DestinationRows({
+  groups,
+  onOpenInMaps,
+  onRemove,
+}: {
+  groups: DestinationGroup[];
+  onOpenInMaps: (dest: string) => void;
+  onRemove: (dest: string) => void;
+}) {
+  if (groups.length === 0) {
+    return (
+      <Text style={s.emptyDayText}>
+        Nenhum destino neste dia ainda — busque acima.
+      </Text>
+    );
+  }
+  return (
+    <View style={s.listCard}>
+      {groups.map((group, gi) => (
+        <View key={group.country ?? "flat"}>
+          {group.country && <Text style={s.groupHeader}>{group.country}</Text>}
+          {group.items.map((dest, i) => {
+            const isLast =
+              gi === groups.length - 1 && i === group.items.length - 1;
+            return (
+              <View
+                key={dest}
+                style={[s.destRow, isLast && { borderBottomWidth: 0 }]}
+              >
+                <TouchableOpacity
+                  style={s.destRowMain}
+                  onPress={() => onOpenInMaps(dest)}
+                  activeOpacity={0.6}
+                >
+                  <Image
+                    source={require("../../assets/images/icon-pin.png")}
+                    style={{ width: 20, height: 20 }}
+                  />
+                  <Text style={s.destRowText} numberOfLines={1}>
+                    {dest}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={14} color={dark.muted} />
+                </TouchableOpacity>
+                <View style={s.destRowDivider} />
+                <TouchableOpacity
+                  onPress={() => onRemove(dest)}
+                  hitSlop={8}
+                  style={s.destRowClose}
+                >
+                  <Ionicons name="close" size={14} color={dark.muted} />
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+      ))}
+    </View>
+  );
+}
 
 export default function ItineraryScreen() {
   const nav = useRouter();
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const isOnline = useNetworkStatus();
   const { activeTrip, updateTrip } = useTrips();
 
   const destinations: string[] = activeTrip?.destinations ?? [];
-  const coverUri = activeTrip ? getDestinationsImage(destinations) : null;
-  const mapHeight = Math.round(windowHeight * 0.62);
+  // Pontos de visitação do roteiro (buscados no drawer abaixo) — separados de
+  // `destinations` (países/cidades do cadastro da viagem) para não misturar
+  // as duas coisas no trip-form. Ver types/index.ts.
+  const itineraryPoints: string[] = activeTrip?.itineraryPoints ?? [];
+  const flights: FlightEntry[] = activeTrip?.flights ?? [];
+  const [rootHeight, setRootHeight] = useState(0);
 
   // Sempre a versão mais recente da trip, pra evitar sobrescrever um destino
   // adicionado pela busca do mapa enquanto o backfill abaixo ainda está
@@ -40,28 +112,94 @@ export default function ItineraryScreen() {
   const activeTripRef = useRef(activeTrip);
   activeTripRef.current = activeTrip;
 
-  // Destinos digitados direto no formulário da viagem (ou adicionados antes
-  // dessa feature) não têm país conhecido, então nunca entravam no
-  // agrupamento por país. Preenche o país (e a coordenada precisa) desses em
-  // segundo plano, sem precisar que o usuário refaça a busca manualmente.
+  const dayList = React.useMemo(
+    () => getTripDays(activeTrip?.depart ?? "", activeTrip?.ret ?? ""),
+    [activeTrip?.depart, activeTrip?.ret],
+  );
+
+  // Reconciliação automática dos destinos, rodando em segundo plano:
+  // 1) Preenche país/coordenada de destinos que ainda não têm (digitados no
+  //    cadastro da viagem, ou adicionados antes dessa feature existir).
+  // 2) Voos com data cadastrada "avisam" o roteiro: o destino desse voo passa
+  //    a valer a partir daquela data, então é pinado automaticamente no dia
+  //    correspondente, sem o usuário precisar buscar e adicionar na mão.
   useEffect(() => {
     if (!activeTrip) return;
-    const missing = destinations.filter(
-      (d: string) => !activeTrip.destinationCoords?.[d],
+
+    const flightDests = flights
+      .filter((f) => f.dest?.trim())
+      .map((f) => ({ dest: f.dest.trim(), date: f.date }));
+
+    const allLabels = [...destinations];
+    for (const f of flightDests) {
+      if (!allLabels.some((d) => d.toLowerCase() === f.dest.toLowerCase())) {
+        allLabels.push(f.dest);
+      }
+    }
+
+    const missingCoords = allLabels.filter(
+      (d) => !activeTrip.destinationCoords?.[d],
     );
-    if (missing.length === 0) return;
+    // Só usa a data do voo se ela cair dentro do período da viagem — evita
+    // que um destino suma da tela por ter uma data fora do intervalo válido.
+    const missingDates = flightDests.filter(
+      (f) =>
+        f.date &&
+        dayList.some((day) => day.key === f.date) &&
+        !activeTrip.destinationDates?.[f.dest],
+    );
+
+    if (
+      allLabels.length === destinations.length &&
+      missingCoords.length === 0 &&
+      missingDates.length === 0
+    ) {
+      return;
+    }
 
     let cancelled = false;
     (async () => {
-      const updates: Record<string, { lat: number; lon: number; country?: string }> = {};
-      for (const dest of missing) {
+      const coordUpdates: Record<
+        string,
+        { lat: number; lon: number; country?: string }
+      > = {};
+      for (const dest of missingCoords) {
         const [best] = await searchPlaces(dest, 1);
-        if (best) updates[dest] = { lat: best.lat, lon: best.lon, country: best.country };
+        if (best)
+          coordUpdates[dest] = {
+            lat: best.lat,
+            lon: best.lon,
+            country: best.country,
+          };
       }
+
       const current = activeTripRef.current;
-      if (cancelled || !current || Object.keys(updates).length === 0) return;
+      if (cancelled || !current) return;
+
+      const currentDestinations: string[] = current.destinations ?? [];
+      const newLabels = allLabels.filter(
+        (d) =>
+          !currentDestinations.some(
+            (cd) => cd.toLowerCase() === d.toLowerCase(),
+          ),
+      );
+      const nextDestinations =
+        newLabels.length > 0
+          ? [...currentDestinations, ...newLabels]
+          : currentDestinations;
+
+      const nextDates = { ...(current.destinationDates ?? {}) };
+      for (const f of missingDates) {
+        if (!nextDates[f.dest] && f.date) nextDates[f.dest] = f.date;
+      }
+
       await updateTrip(current.id, {
-        destinationCoords: { ...(current.destinationCoords ?? {}), ...updates },
+        destinations: nextDestinations,
+        destinationCoords: {
+          ...(current.destinationCoords ?? {}),
+          ...coordUpdates,
+        },
+        destinationDates: nextDates,
       });
     })();
 
@@ -69,8 +207,75 @@ export default function ItineraryScreen() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [destinations.join("|"), activeTrip?.id]);
+  }, [
+    destinations.join("|"),
+    JSON.stringify(activeTrip?.flights ?? []),
+    activeTrip?.id,
+    dayList,
+  ]);
+  // Só considera pontos de visitação sem data — o destino macro (ex: "Los
+  // Angeles") não aparece nessa tela como item da lista, então seu status de
+  // data atribuída é irrelevante aqui (ver destinationsForSelectedDay abaixo).
+  const hasUnassigned = itineraryPoints.some(
+    (d) => !activeTrip?.itineraryPointDates?.[d],
+  );
 
+  const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
+
+  // Reinicializa a data selecionada sempre que a viagem ativa muda. Prioriza
+  // o bucket "sem data" quando ele existe: é onde vive TODO destino de trips
+  // criadas antes dessa feature, então abrir num dia específico (vazio)
+  // faria o mapa/lista sumirem pro usuário sem essa escolha. Só quando não
+  // há destinos sem data é que faz sentido priorizar o dia de hoje / dia 1.
+  useEffect(() => {
+    if (!activeTrip) return;
+    const todayKey = format(new Date(), "yyyy-MM-dd");
+    const fallback = hasUnassigned
+      ? UNASSIGNED_DAY_KEY
+      : (dayList.find((d) => d.key === todayKey)?.key ??
+        dayList[0]?.key ??
+        null);
+    setSelectedDayKey(fallback);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTrip?.id]);
+
+  // Lista/mapa do dia mostram só pontos de visitação (buscados no drawer) —
+  // o destino macro cadastrado no trip-form (ex: "Los Angeles") nunca aparece
+  // aqui como item; ele só entra indiretamente via fallbackCenter, pra dar
+  // contexto geográfico ao mapa quando o dia ainda não tem nenhum ponto.
+  const destinationsForSelectedDay = itineraryPoints.filter((d) =>
+    selectedDayKey === UNASSIGNED_DAY_KEY
+      ? !activeTrip?.itineraryPointDates?.[d]
+      : activeTrip?.itineraryPointDates?.[d] === selectedDayKey,
+  );
+
+  const combinedCoords = activeTrip?.itineraryPointCoords ?? {};
+
+  // Quando o dia selecionado ainda não tem nenhum destino pinado, centraliza
+  // o mapa no voo mais recente até essa data (ex: viagem multi-país com um
+  // voo pra outro destino no meio — a partir daquele dia o mapa já reflete
+  // o novo país mesmo que nenhum ponto tenha sido pinado ainda nele) ou,
+  // na ausência de voos, no destino cadastrado na criação da viagem.
+  const activeFlightCenter = (() => {
+    if (!selectedDayKey || selectedDayKey === UNASSIGNED_DAY_KEY)
+      return undefined;
+    const latest = flights
+      .filter((f) => f.dest?.trim() && f.date && f.date <= selectedDayKey)
+      .sort((a, b) => (a.date! < b.date! ? 1 : -1))[0];
+    return latest
+      ? activeTrip?.destinationCoords?.[latest.dest.trim()]
+      : undefined;
+  })();
+
+  const fallbackCenter =
+    activeFlightCenter ??
+    destinations
+      .map((d) => activeTrip?.destinationCoords?.[d])
+      .find((c): c is { lat: number; lon: number; country?: string } => !!c);
+
+  // Adicionado pela busca do drawer do itinerário — é sempre um ponto de
+  // visitação do roteiro, não um destino do cadastro da viagem (trip-form).
+  // Por isso grava em `itineraryPoints`, campo separado de `destinations`.
   const handleAddDestination = async (
     label: string,
     lat: number,
@@ -78,161 +283,238 @@ export default function ItineraryScreen() {
     country?: string,
   ) => {
     if (!activeTrip) return;
-    const exists = destinations.some((d: string) => d.toLowerCase() === label.toLowerCase());
+    const exists = itineraryPoints.some(
+      (d: string) => d.toLowerCase() === label.toLowerCase(),
+    );
+    const nextDates = { ...(activeTrip.itineraryPointDates ?? {}) };
+    if (selectedDayKey && selectedDayKey !== UNASSIGNED_DAY_KEY) {
+      nextDates[label] = selectedDayKey;
+    }
     await updateTrip(activeTrip.id, {
-      destinations: exists ? destinations : [...destinations, label],
-      destinationCoords: {
-        ...(activeTrip.destinationCoords ?? {}),
+      itineraryPoints: exists ? itineraryPoints : [...itineraryPoints, label],
+      itineraryPointCoords: {
+        ...(activeTrip.itineraryPointCoords ?? {}),
         [label]: { lat, lon, country },
       },
+      itineraryPointDates: nextDates,
     });
   };
 
+  // Os destinos da lista costumam ser cidades/países bem distantes entre si
+  // (ex: Tóquio e Los Angeles na mesma viagem), então não faz sentido pedir
+  // uma rota encadeada entre todos eles. Em vez disso, cada ponto abre sua
+  // própria rota no Google Maps partindo da localização atual do usuário.
+  const handleOpenInMaps = (dest: string) => {
+    const point = combinedCoords[dest];
+    if (!point) {
+      Alert.alert(
+        "Localização não encontrada",
+        "Aguarde um instante enquanto localizamos esse destino e tente novamente.",
+      );
+      return;
+    }
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${point.lat},${point.lon}&travelmode=driving`;
+    Linking.openURL(url);
+  };
+
+  // Diferente do ponto único acima, aqui os destinos já são apenas os do dia
+  // selecionado — geograficamente coerentes entre si — então uma rota
+  // encadeada entre eles faz sentido.
+  const handleOpenDayRoute = () => {
+    const points = destinationsForSelectedDay
+      .map((d) => combinedCoords[d])
+      .filter((c): c is { lat: number; lon: number; country?: string } => !!c);
+    if (points.length < 2) return;
+    const url = `https://www.google.com/maps/dir/${points
+      .map((p) => `${p.lat},${p.lon}`)
+      .join("/")}`;
+    Linking.openURL(url);
+  };
+
+  // Um label do dia pode vir tanto de `destinations` (macro, cadastrado no
+  // trip-form) quanto de `itineraryPoints` (ponto buscado aqui no drawer) —
+  // remove do campo certo em cada caso.
   const handleRemoveDestination = async (label: string) => {
     if (!activeTrip) return;
+    if (itineraryPoints.includes(label)) {
+      const nextCoords = { ...(activeTrip.itineraryPointCoords ?? {}) };
+      delete nextCoords[label];
+      const nextDates = { ...(activeTrip.itineraryPointDates ?? {}) };
+      delete nextDates[label];
+      await updateTrip(activeTrip.id, {
+        itineraryPoints: itineraryPoints.filter((d: string) => d !== label),
+        itineraryPointCoords: nextCoords,
+        itineraryPointDates: nextDates,
+      });
+      return;
+    }
     const nextCoords = { ...(activeTrip.destinationCoords ?? {}) };
     delete nextCoords[label];
+    const nextDates = { ...(activeTrip.destinationDates ?? {}) };
+    delete nextDates[label];
     await updateTrip(activeTrip.id, {
       destinations: destinations.filter((d: string) => d !== label),
       destinationCoords: nextCoords,
+      destinationDates: nextDates,
     });
   };
 
   // Só divide a lista por país quando há mais de um país conhecido entre os
-  // destinos — destinos sem país conhecido (ex: adicionados antes dessa
-  // feature) caem num grupo "outros destinos" pra não sumir da lista.
+  // destinos do dia selecionado — destinos sem país conhecido (ex:
+  // adicionados antes dessa feature) caem num grupo "outros destinos" pra
+  // não sumir da lista.
   const countryOf = (dest: string): string | undefined =>
-    activeTrip?.destinationCoords?.[dest]?.country;
+    combinedCoords[dest]?.country;
   const distinctCountries = new Set(
-    destinations.map(countryOf).filter((c): c is string => !!c),
+    destinationsForSelectedDay.map(countryOf).filter((c): c is string => !!c),
   );
   const groupByCountry = distinctCountries.size > 1;
 
-  const destinationGroups: { country: string | null; items: string[] }[] = groupByCountry
-    ? (() => {
-        const order: string[] = [];
-        const map: Record<string, string[]> = {};
-        for (const dest of destinations) {
-          const key = countryOf(dest) ?? "Outros destinos";
-          if (!map[key]) {
-            map[key] = [];
-            order.push(key);
+  const destinationGroups: { country: string | null; items: string[] }[] =
+    groupByCountry
+      ? (() => {
+          const order: string[] = [];
+          const map: Record<string, string[]> = {};
+          for (const dest of destinationsForSelectedDay) {
+            const key = countryOf(dest) ?? "Outros destinos";
+            if (!map[key]) {
+              map[key] = [];
+              order.push(key);
+            }
+            map[key].push(dest);
           }
-          map[key].push(dest);
-        }
-        return order.map((country) => ({ country, items: map[country] }));
-      })()
-    : destinations.length > 0
-      ? [{ country: null, items: destinations }]
-      : [];
+          return order.map((country) => ({ country, items: map[country] }));
+        })()
+      : destinationsForSelectedDay.length > 0
+        ? [{ country: null, items: destinationsForSelectedDay }]
+        : [];
 
   return (
     <View style={s.root}>
-      <View style={[s.header, { paddingTop: insets.top + 16 }]}>
-        <View>
-          <Text style={s.headerEyebrow}>seu roteiro</Text>
-          <Text style={s.headerTitle}>itinerário</Text>
-        </View>
-      </View>
-
       {!activeTrip ? (
-        <View style={s.empty}>
-          <Ionicons name="map-outline" size={32} color={colors.muted} />
-          <Text style={s.emptyText}>Nenhuma viagem ativa ainda.</Text>
-          <TouchableOpacity
-            style={s.emptyBtn}
-            onPress={() => nav.push("/trip-form")}
-            activeOpacity={0.8}
-          >
-            <Text style={s.emptyBtnText}>criar viagem</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={[s.content, { flexGrow: 1 }]}
-          showsVerticalScrollIndicator={false}
-        >
-          <ImageBackground
-            source={{ uri: coverUri ?? undefined }}
-            style={s.cover}
-            imageStyle={s.coverImg}
-          >
-            <LinearGradient
-              colors={["rgba(17,30,53,0.05)", "rgba(17,30,53,0.85)"]}
-              style={s.coverGrad}
+        <>
+          <View style={[s.header, { paddingTop: insets.top + 16 }]}>
+            <View>
+              <Text style={s.headerEyebrow}>seu roteiro</Text>
+              <Text style={s.headerTitle}>itinerário</Text>
+            </View>
+          </View>
+          <View style={s.empty}>
+            <Ionicons name="map-outline" size={32} color={dark.muted} />
+            <Text style={s.emptyText}>Nenhuma viagem ativa ainda.</Text>
+            <TouchableOpacity
+              style={s.emptyBtn}
+              onPress={() => nav.push("/trip-form")}
+              activeOpacity={0.8}
             >
-              <Text style={s.coverTitle} numberOfLines={1}>
-                {activeTrip.name}
-              </Text>
-              {destinations.length > 0 && (
-                <Text style={s.coverSub} numberOfLines={1}>
-                  {destinations.join("  ·  ")}
-                </Text>
-              )}
-            </LinearGradient>
-          </ImageBackground>
+              <Text style={s.emptyBtnText}>criar viagem</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : !isOnline ? (
+        <>
+          <View style={[s.header, { paddingTop: insets.top + 16 }]}>
+            <View>
+              <Text style={s.headerEyebrow}>seu roteiro</Text>
+              <Text style={s.headerTitle}>itinerário</Text>
+            </View>
+          </View>
 
-          <DestinationMap
-            destinations={destinations}
-            destinationCoords={activeTrip.destinationCoords}
-            onAddDestination={handleAddDestination}
-            height={mapHeight}
+          <View style={s.offlineBanner}>
+            <Ionicons name="cloud-offline-outline" size={16} color={dark.yellow} />
+            <Text style={s.offlineBannerText}>
+              Você está sem internet — mostrando só a lista do dia (sem mapa
+              e sem busca de novos pontos).
+            </Text>
+          </View>
+
+          <DateCarousel
+            days={dayList}
+            selectedKey={selectedDayKey}
+            onSelect={setSelectedDayKey}
+            hasUnassigned={hasUnassigned}
+            absolute={false}
+            style={s.offlineCarousel}
           />
 
-          {destinationGroups.length > 0 && (
-            <>
-              <Text style={s.sectionLabel}>destinos adicionados</Text>
-              <View style={s.listCard}>
-                {destinationGroups.map((group, gi) => (
-                  <View key={group.country ?? "flat"}>
-                    {group.country && (
-                      <Text style={s.groupHeader}>{group.country}</Text>
-                    )}
-                    {group.items.map((dest, i) => {
-                      const isLast =
-                        gi === destinationGroups.length - 1 &&
-                        i === group.items.length - 1;
-                      return (
-                        <View
-                          key={dest}
-                          style={[s.destRow, isLast && { borderBottomWidth: 0 }]}
-                        >
-                          <Ionicons
-                            name="location"
-                            size={14}
-                            color={colorForCountry(countryOf(dest))}
-                          />
-                          <Text style={s.destRowText} numberOfLines={1}>
-                            {dest}
-                          </Text>
-                          <TouchableOpacity
-                            onPress={() => handleRemoveDestination(dest)}
-                            hitSlop={8}
-                          >
-                            <Ionicons
-                              name="close"
-                              size={14}
-                              color={colors.muted}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      );
-                    })}
-                  </View>
-                ))}
-              </View>
-            </>
-          )}
+          <ScrollView contentContainerStyle={s.sheetContent}>
+            <DestinationRows
+              groups={destinationGroups}
+              onOpenInMaps={handleOpenInMaps}
+              onRemove={handleRemoveDestination}
+            />
+          </ScrollView>
+        </>
+      ) : (
+        <View
+          style={{ flex: 1 }}
+          onLayout={(e) => setRootHeight(e.nativeEvent.layout.height)}
+        >
+          <DestinationMap
+            fullscreen
+            destinations={destinationsForSelectedDay}
+            destinationCoords={combinedCoords}
+            fallbackCenter={fallbackCenter}
+          />
 
-          <View style={{ height: 20 }} />
-        </ScrollView>
+          <DateCarousel
+            days={dayList}
+            selectedKey={selectedDayKey}
+            onSelect={setSelectedDayKey}
+            hasUnassigned={hasUnassigned}
+            style={{ top: insets.top + CAROUSEL_TOP_GAP }}
+          />
+
+          {rootHeight > 0 && (
+            <BottomSheet
+              index={1}
+              snapPoints={[
+                SHEET_COLLAPSED_HEIGHT,
+                rootHeight * SHEET_EXPANDED_RATIO,
+              ]}
+              enableDynamicSizing={false}
+              backgroundStyle={s.sheetBg}
+              handleIndicatorStyle={s.sheetHandle}
+              keyboardBehavior="extend"
+              keyboardBlurBehavior="restore"
+              android_keyboardInputMode="adjustResize"
+            >
+              <View style={s.sheetHeader}>
+                <Text style={s.sectionLabel}>destinos do dia</Text>
+                <DestinationSearch onAddDestination={handleAddDestination} />
+                <Text style={s.sectionHint}>
+                  toque em um destino para abrir a rota no Google Maps a partir
+                  da sua localização
+                </Text>
+                {destinationsForSelectedDay.length > 1 && (
+                  <TouchableOpacity
+                    style={s.dayRouteBtn}
+                    onPress={handleOpenDayRoute}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="navigate" size={14} color={dark.ink} />
+                    <Text style={s.dayRouteBtnText}>abrir rota do dia</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <BottomSheetScrollView contentContainerStyle={s.sheetContent}>
+                <DestinationRows
+                  groups={destinationGroups}
+                  onOpenInMaps={handleOpenInMaps}
+                  onRemove={handleRemoveDestination}
+                />
+              </BottomSheetScrollView>
+            </BottomSheet>
+          )}
+        </View>
       )}
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.offwhite },
+  root: { flex: 1, backgroundColor: dark.bg },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -245,42 +527,55 @@ const s = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.8,
     textTransform: "uppercase",
-    color: colors.muted,
+    color: dark.muted,
     marginBottom: 3,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: colors.navy,
+    color: dark.white,
     fontStyle: "italic",
   },
 
-  content: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
-
-  cover: {
-    height: 90,
-    borderRadius: radius.xl,
-    overflow: "hidden",
+  offlineBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
-    ...shadow.md,
-  },
-  coverImg: { borderRadius: radius.xl },
-  coverGrad: {
-    flex: 1,
-    justifyContent: "flex-end",
     padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: "rgba(236,226,46,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(236,226,46,0.35)",
   },
-  coverTitle: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: colors.white,
-    fontStyle: "italic",
-  },
-  coverSub: {
+  offlineBannerText: {
+    flex: 1,
     fontSize: 12,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.8)",
-    marginTop: 2,
+    color: dark.yellow,
+  },
+  offlineCarousel: {
+    marginBottom: spacing.md,
+  },
+
+  sheetBg: {
+    backgroundColor: dark.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    ...shadow.md,
+  },
+  sheetHandle: {
+    backgroundColor: dark.border,
+    width: 36,
+  },
+  sheetHeader: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  sheetContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xl,
   },
 
   sectionLabel: {
@@ -288,14 +583,43 @@ const s = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1.5,
     textTransform: "uppercase",
-    color: colors.muted,
+    color: dark.muted,
+    marginBottom: 2,
+  },
+  sectionHint: {
+    fontSize: 11,
+    //fontWeight: "500",
+    color: dark.muted,
     marginBottom: spacing.sm,
   },
+  dayRouteBtn: {
+    flexDirection: "row",
+    alignSelf: "flex-start",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radius.full,
+    backgroundColor: dark.blue,
+  },
+  dayRouteBtnText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: dark.ink,
+  },
+  emptyDayText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: dark.muted,
+    textAlign: "center",
+    paddingVertical: spacing.xl,
+  },
+
   listCard: {
-    backgroundColor: colors.white,
+    backgroundColor: dark.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: dark.border,
     paddingHorizontal: spacing.md,
     ...shadow.sm,
   },
@@ -304,23 +628,39 @@ const s = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1,
     textTransform: "uppercase",
-    color: colors.teal2,
+    color: dark.blue,
     paddingTop: spacing.md,
     paddingBottom: 4,
   },
   destRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: spacing.sm,
-    paddingVertical: 10,
+    paddingVertical: 4,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: dark.border,
+  },
+  destRowMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: 8,
   },
   destRowText: {
     flex: 1,
     fontSize: 13,
     fontWeight: "700",
-    color: colors.navy,
+    color: dark.white,
+  },
+  destRowDivider: {
+    width: 1,
+    alignSelf: "stretch",
+    marginVertical: 8,
+    backgroundColor: dark.border,
+  },
+  destRowClose: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
   },
 
   empty: {
@@ -330,13 +670,13 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     gap: spacing.sm,
   },
-  emptyText: { fontSize: 14, fontWeight: "700", color: colors.muted },
+  emptyText: { fontSize: 14, fontWeight: "700", color: dark.muted },
   emptyBtn: {
     marginTop: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: 12,
     borderRadius: radius.full,
-    backgroundColor: colors.navy,
+    backgroundColor: dark.pink,
   },
-  emptyBtnText: { fontSize: 13, fontWeight: "800", color: colors.white },
+  emptyBtnText: { fontSize: 13, fontWeight: "800", color: dark.ink },
 });

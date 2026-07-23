@@ -1,4 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import {
+  loadNotificationSettings,
+  requestNotificationPermission,
+  rescheduleTripCountdown,
+  saveNotificationSettings,
+} from "../utils/notifications";
 import { createDefaultChecks, getDefaultCheckItems, loadChecks, loadLooks, loadTrips, saveChecks, saveLooks, saveTrips } from "../utils/storage";
 import { getDeviceId, isConfigured, loadFromCloud, saveToCloud } from "../utils/supabase";
 import { getVisaWarnings } from "../utils/visa";
@@ -20,7 +26,12 @@ export function TripProvider({ children }) {
   const [looks, setLooks] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [synced, setSynced] = useState(false);
+  const [notifSettings, setNotifSettings] = useState(null);
   const deviceIdRef = React.useRef(null);
+
+  useEffect(() => {
+    loadNotificationSettings().then(setNotifSettings);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -72,6 +83,26 @@ export function TripProvider({ children }) {
   }, []);
 
   const activeTrip = findNearestTrip(trips);
+
+  // Reagenda as notificações de contagem regressiva sempre que a viagem
+  // ativa (nome/data) ou as preferências de marco mudam — só pra viagem em
+  // destaque na Home, não todas as cadastradas.
+  useEffect(() => {
+    if (!notifSettings) return;
+    rescheduleTripCountdown(activeTrip, notifSettings);
+  }, [activeTrip?.id, activeTrip?.name, activeTrip?.depart, notifSettings]);
+
+  const toggleNotifMilestone = async (milestone) => {
+    const turningOn = !notifSettings?.[milestone];
+    if (turningOn) {
+      const granted = await requestNotificationPermission();
+      if (!granted) return { granted: false };
+    }
+    const next = { ...notifSettings, [milestone]: !notifSettings?.[milestone] };
+    setNotifSettings(next);
+    await saveNotificationSettings(next);
+    return { granted: true };
+  };
 
   // Dispara sync para nuvem após qualquer mudança (fire-and-forget)
   const pushToCloud = async (nextTrips, nextChecks, nextLooks) => {
@@ -174,6 +205,8 @@ export function TripProvider({ children }) {
         activeLooks,
         addLooks,
         removeLook,
+        notifSettings,
+        toggleNotifMilestone,
         loaded,
         synced,
       }}

@@ -17,7 +17,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { colors, getDestImage, radius, shadow, spacing } from "../theme";
+import { dark, getDestImage, radius, shadow, spacing } from "../theme";
 import {
     clearHotelCache,
     fetchHotelDetails,
@@ -97,7 +97,7 @@ export default function HotelCard({
       <View style={hc.photoWrap}>
         {loading ? (
           <View style={hc.photoPlaceholder}>
-            <ActivityIndicator color={colors.teal} size="small" />
+            <ActivityIndicator color={dark.blue} size="small" />
           </View>
         ) : (
           <Image
@@ -132,7 +132,10 @@ export default function HotelCard({
         {/* botão editar no canto */}
         {onEdit && (
           <TouchableOpacity style={hc.editOverlay} onPress={onEdit}>
-            <Ionicons name="pencil" size={13} color={colors.white} />
+            <Image
+              source={require("../assets/images/icon-edit.png")}
+              style={{ width: 16, height: 16 }}
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -166,7 +169,7 @@ export default function HotelCard({
                 style={hc.mapsBtn}
                 onPress={() => Linking.openURL(details.googleMapsUrl)}
               >
-                <Ionicons name="map-outline" size={13} color={colors.teal} />
+                <Ionicons name="map-outline" size={13} color={dark.blue} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -196,7 +199,7 @@ export default function HotelCard({
             <Ionicons
               name="document-text-outline"
               size={12}
-              color={colors.muted}
+              color={dark.muted}
             />
             <Text style={hc.confLabel}>confirmação</Text>
             <Text style={hc.confCode}>{confirmationCode}</Text>
@@ -213,10 +216,10 @@ const PHOTO_HEIGHT = 160;
 
 const hc = StyleSheet.create({
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: dark.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: dark.border,
     overflow: "hidden",
     marginBottom: spacing.md,
     ...shadow.md,
@@ -225,7 +228,7 @@ const hc = StyleSheet.create({
   // foto
   photoWrap: {
     height: PHOTO_HEIGHT,
-    backgroundColor: colors.offwhite,
+    backgroundColor: dark.surfaceAlt,
     position: "relative",
   },
   photo: {
@@ -237,11 +240,11 @@ const hc = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.xs,
-    backgroundColor: colors.offwhite,
+    backgroundColor: dark.surfaceAlt,
   },
   photoFallbackText: {
     fontSize: 11,
-    color: colors.muted,
+    color: dark.muted,
     fontWeight: "600",
   },
 
@@ -258,7 +261,7 @@ const hc = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
-  ratingNum: { fontSize: 12, fontWeight: "800", color: colors.white },
+  ratingNum: { fontSize: 12, fontWeight: "800", color: dark.white },
   ratingCount: {
     fontSize: 10,
     color: "rgba(255,255,255,0.7)",
@@ -289,12 +292,12 @@ const hc = StyleSheet.create({
   hotelName: {
     fontSize: 15,
     fontWeight: "800",
-    color: colors.navy,
+    color: dark.white,
     lineHeight: 20,
   },
   address: {
     fontSize: 11,
-    color: colors.muted,
+    color: dark.muted,
     fontWeight: "600",
     marginTop: 2,
   },
@@ -303,23 +306,23 @@ const hc = StyleSheet.create({
   priceBadge: {
     paddingHorizontal: 7,
     paddingVertical: 2,
-    backgroundColor: colors.tealLight,
+    backgroundColor: dark.blue,
     borderRadius: radius.full,
   },
-  priceText: { fontSize: 11, fontWeight: "800", color: colors.teal2 },
+  priceText: { fontSize: 11, fontWeight: "800", color: dark.ink },
   mapsBtn: {
     width: 28,
     height: 28,
     borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: dark.border,
     alignItems: "center",
     justifyContent: "center",
   },
 
   divider: {
     height: 1,
-    backgroundColor: colors.border,
+    backgroundColor: dark.border,
     marginVertical: spacing.md,
   },
 
@@ -330,15 +333,15 @@ const hc = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    color: colors.muted,
+    color: dark.muted,
     marginBottom: 2,
   },
-  dateValue: { fontSize: 14, fontWeight: "800", color: colors.navy },
+  dateValue: { fontSize: 14, fontWeight: "800", color: dark.white },
   nightsBlock: { flex: 1, alignItems: "center" },
   nightsNum: {
     fontSize: 22,
     fontWeight: "900",
-    color: colors.teal,
+    color: dark.blue,
     lineHeight: 24,
   },
   nightsLabel: {
@@ -346,7 +349,7 @@ const hc = StyleSheet.create({
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    color: colors.muted,
+    color: dark.muted,
   },
 
   confRow: {
@@ -356,8 +359,8 @@ const hc = StyleSheet.create({
     marginTop: spacing.md,
     paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: dark.border,
   },
-  confLabel: { fontSize: 10, color: colors.muted, fontWeight: "600" },
-  confCode: { fontSize: 12, fontWeight: "800", color: colors.purple },
+  confLabel: { fontSize: 10, color: dark.muted, fontWeight: "600" },
+  confCode: { fontSize: 12, fontWeight: "800", color: dark.pink },
 });

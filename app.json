@@ -31,6 +31,18 @@
       "./plugins/withAsyncStorageRepo",
       "@react-native-google-signin/google-signin",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permitir que o my-trip-buddy acesse suas fotos para escolher a capa da viagem."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#EC6BA3"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
@@ -48,6 +60,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fa1e91bb-e6bd-41f4-8446-fe32db919301"
+      }
+    },
+    "owner": "thaymull3rs-team"
   }
 }

@@ -6,6 +6,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -23,9 +24,8 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
 import { useTrips } from "../hooks/useTrips";
-import { colors, radius, shadow, spacing } from "../theme";
+import { dark, radius, shadow, spacing } from "../theme";
 import { FlightEntry, HotelEntry, Trip } from "../types";
 import { getDefaultCheckItems } from "../utils/storage";
 import { getVisaWarnings } from "../utils/visa";
@@ -38,13 +38,31 @@ const STEPS = [
   { title: "Revisão", subtitle: "Confirme os dados" },
 ] as const;
 
-// ─── date mask: auto-inserts dashes → AAAA-MM-DD ──────────────────────────────
+// ─── date mask: auto-inserts dashes → DD-MM-AAAA ──────────────────────────────
+// A viagem continua guardada internamente em ISO (YYYY-MM-DD) — é o que todo
+// o resto do app espera (itinerário, ordenação de viagens, checklist etc).
+// Só a exibição/digitação neste formulário usa DD-MM-AAAA; a conversão
+// acontece na borda (toIso ao salvar, toBr ao carregar uma viagem existente).
 
 function maskDate(val: string): string {
   const d = val.replace(/\D/g, "").slice(0, 8);
-  if (d.length <= 4) return d;
-  if (d.length <= 6) return `${d.slice(0, 4)}-${d.slice(4)}`;
-  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`;
+  if (d.length <= 2) return d;
+  if (d.length <= 4) return `${d.slice(0, 2)}-${d.slice(2)}`;
+  return `${d.slice(0, 2)}-${d.slice(2, 4)}-${d.slice(4)}`;
+}
+
+function toIso(br: string): string {
+  const m = br.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  if (!m) return "";
+  const [, dd, mm, yyyy] = m;
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function toBr(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return "";
+  const [, yyyy, mm, dd] = m;
+  return `${dd}-${mm}-${yyyy}`;
 }
 
 // Animated progress indicator
@@ -52,12 +70,7 @@ const ProgressBar = ({ step, total }: { step: number; total: number }) => {
   const progress = (step / total) * 100;
   return (
     <View style={s.progressContainer}>
-      <LinearGradient
-        colors={[colors.sage, colors.teal]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={[s.progressBar, { width: `${progress}%` }]}
-      />
+      <View style={[s.progressBar, { width: `${progress}%` }]} />
     </View>
   );
 };
@@ -74,10 +87,9 @@ function Label({ text, hint }: { text: string; hint?: string }) {
 function TipBox({ text }: { text: string }) {
   return (
     <View style={s.tip}>
-      <Ionicons
-        name="information-circle-outline"
-        size={15}
-        color={colors.teal2}
+      <Image
+        source={require("../assets/images/icon-info.png")}
+        style={{ width: 18, height: 18 }}
       />
       <Text style={s.tipText}>{text}</Text>
     </View>
@@ -93,7 +105,10 @@ function DestChip({
 }) {
   return (
     <View style={s.destChip}>
-      <Ionicons name="location" size={10} color={colors.white} />
+      <Image
+        source={require("../assets/images/icon-pin.png")}
+        style={{ width: 16, height: 16 }}
+      />
       <Text style={s.destChipText}>{label}</Text>
       <TouchableOpacity onPress={onRemove} hitSlop={8}>
         <Text style={s.destChipX}>×</Text>
@@ -129,47 +144,25 @@ function NavButtons({
           onPress={onBack}
           activeOpacity={0.8}
         >
-          <Ionicons name="arrow-back" size={16} color={colors.navy} />
+          <Ionicons name="arrow-back" size={16} color={dark.white} />
           <Text style={s.navBackText}>voltar</Text>
         </TouchableOpacity>
       )}
-      <LinearGradient
-        colors={
-          step === total
-            ? [colors.blush, colors.accent]
-            : [colors.sage, colors.teal]
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[s.navNextGrad]}
+      <TouchableOpacity
+        style={[
+          s.navNext,
+          {
+            backgroundColor: step === total ? dark.pink : dark.blue,
+            shadowColor: step === total ? dark.pink : dark.blue,
+          },
+        ]}
+        onPress={onNext}
+        activeOpacity={0.85}
       >
-        <TouchableOpacity
-          style={s.navNext}
-          onPress={onNext}
-          activeOpacity={0.85}
-        >
-          <Text style={s.navNextText}>{nextLabel}</Text>
-          <Ionicons name={nextIcon} size={16} color={colors.white} />
-        </TouchableOpacity>
-      </LinearGradient>
+        <Text style={s.navNextText}>{nextLabel}</Text>
+        <Ionicons name={nextIcon} size={16} color={dark.ink} />
+      </TouchableOpacity>
     </View>
-  );
-}
-
-function CloudTop() {
-  return (
-    <Svg
-      width="100%"
-      height={52}
-      viewBox="0 0 390 52"
-      preserveAspectRatio="none"
-      style={{ marginTop: -1 }}
-    >
-      <Path
-        d="M0,52 L0,30 Q14,30 18,18 Q22,6 36,8 Q46,10 48,26 Q56,8 76,6 Q98,4 100,22 Q108,8 130,6 Q152,4 154,22 Q162,8 184,8 Q204,8 206,22 Q216,8 238,8 Q256,8 258,20 Q268,8 288,8 Q308,10 310,24 Q316,12 330,14 Q344,16 344,28 L390,28 L390,52 Z"
-        fill={colors.offwhite}
-      />
-    </Svg>
   );
 }
 
@@ -241,12 +234,12 @@ function getDestTheme(destinations: string[]): DestTheme {
 }
 
 const CAT_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  doc: { bg: colors.greenLight, text: colors.green, label: "docs" },
-  fly: { bg: colors.purpleLight, text: colors.purple, label: "voo" },
-  stay: { bg: colors.goldLight, text: colors.gold, label: "hotel" },
-  look: { bg: colors.accentLight, text: colors.accent, label: "looks" },
-  misc: { bg: colors.offwhite, text: colors.muted, label: "outro" },
-  visa: { bg: colors.warningLight, text: colors.warning, label: "visto" },
+  doc: { bg: dark.green, text: dark.ink, label: "docs" },
+  fly: { bg: dark.blue, text: dark.ink, label: "voo" },
+  stay: { bg: dark.yellow, text: dark.ink, label: "hotel" },
+  look: { bg: dark.pink, text: dark.ink, label: "looks" },
+  misc: { bg: "rgba(255,255,255,0.08)", text: dark.muted, label: "outro" },
+  visa: { bg: dark.yellow, text: dark.ink, label: "visto" },
 };
 
 function ReviewHero({
@@ -280,17 +273,7 @@ function ReviewHero({
   }));
 
   return (
-    <LinearGradient
-      colors={theme.grad}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={s.reviewHero}
-    >
-      {/* decorative circles */}
-      <View style={s.heroCircle1} />
-      <View style={s.heroCircle2} />
-      <View style={s.heroCircle3} />
-
+    <View style={s.reviewHero}>
       {/* shimmer sweep */}
       <Animated.View style={[s.heroShimmerWrap, shimmerStyle]}>
         <LinearGradient
@@ -305,17 +288,8 @@ function ReviewHero({
         />
       </Animated.View>
 
-      {/* emoji decoration */}
-      <Text style={s.heroEmoji}>{theme.emoji}</Text>
-
       {/* content */}
       <View style={{ zIndex: 3 }}>
-        <Ionicons
-          name="airplane"
-          size={13}
-          color="rgba(255,255,255,0.5)"
-          style={{ marginBottom: 6 }}
-        />
         <Text style={s.reviewHeroName}>{name}</Text>
         <Text style={s.reviewHeroSub}>
           {fmtDate(depart)}
@@ -323,7 +297,7 @@ function ReviewHero({
           {nights > 0 ? `  ·  ${nights} noites` : ""}
         </Text>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -348,13 +322,19 @@ export default function TripFormScreen() {
   const [name, setName] = useState(existing?.name ?? "");
   const [dests, setDests] = useState<string[]>(initialDests);
   const [destIn, setDestIn] = useState("");
-  const [depart, setDepart] = useState(existing?.depart ?? "");
-  const [ret, setRet] = useState(existing?.ret ?? "");
+  const [depart, setDepart] = useState(
+    existing?.depart ? toBr(existing.depart) : "",
+  );
+  const [ret, setRet] = useState(existing?.ret ? toBr(existing.ret) : "");
   const [origin, setOrigin] = useState(existing?.origin ?? "Brasil");
 
   // step 2 — multiple flights
   const [flights, setFlights] = useState<FlightEntry[]>(() => {
-    if (existing?.flights?.length) return existing.flights;
+    if (existing?.flights?.length)
+      return existing.flights.map((f: FlightEntry) => ({
+        ...f,
+        date: f.date ? toBr(f.date) : f.date,
+      }));
     if (existing?.flightNumber)
       return [
         {
@@ -393,12 +373,17 @@ export default function TripFormScreen() {
     setName(trip?.name ?? "");
     setDests(tripDests);
     setDestIn("");
-    setDepart(trip?.depart ?? "");
-    setRet(trip?.ret ?? "");
+    setDepart(trip?.depart ? toBr(trip.depart) : "");
+    setRet(trip?.ret ? toBr(trip.ret) : "");
     setOrigin(trip?.origin ?? "Brasil");
 
     if (trip?.flights?.length) {
-      setFlights(trip.flights);
+      setFlights(
+        trip.flights.map((f: FlightEntry) => ({
+          ...f,
+          date: f.date ? toBr(f.date) : f.date,
+        })),
+      );
     } else if (trip?.flightNumber) {
       setFlights([
         { flightNumber: String(trip.flightNumber), dest: tripDests[0] ?? "" },
@@ -433,8 +418,8 @@ export default function TripFormScreen() {
       return Math.max(
         0,
         differenceInDays(
-          new Date(ret + "T00:00:00"),
-          new Date(depart + "T00:00:00"),
+          new Date(toIso(ret) + "T00:00:00"),
+          new Date(toIso(depart) + "T00:00:00"),
         ),
       );
     } catch {
@@ -444,7 +429,9 @@ export default function TripFormScreen() {
 
   const fmtDate = (d: string) => {
     try {
-      return format(new Date(d + "T00:00:00"), "d 'de' MMM", { locale: ptBR });
+      return format(new Date(toIso(d) + "T00:00:00"), "d 'de' MMM", {
+        locale: ptBR,
+      });
     } catch {
       return d;
     }
@@ -513,13 +500,20 @@ export default function TripFormScreen() {
   const back = () => setStep((prev) => prev - 1);
 
   const save = async () => {
-    const cleanFlights = flights.filter((f) => f.flightNumber.trim());
+    const isoDepart = toIso(depart);
+    const isoRet = toIso(ret) || isoDepart;
+    const cleanFlights = flights
+      .filter((f) => f.flightNumber.trim())
+      .map((f) => ({
+        ...f,
+        date: f.date ? toIso(f.date) || undefined : f.date,
+      }));
     const cleanHotels = hotels.filter((h) => h.name.trim());
     const tripData: Omit<Trip, "id"> = {
       name: name.trim(),
       destinations: dests.length ? dests : ["Destino"],
-      depart,
-      ret: ret || depart,
+      depart: isoDepart,
+      ret: isoRet,
       origin: origin.trim() || "Brasil",
       flightNumber: cleanFlights[0]?.flightNumber ?? "",
       hotelName: cleanHotels[0]?.name ?? "",
@@ -554,11 +548,8 @@ export default function TripFormScreen() {
   // ─── render ────────────────────────────────────────────────────────────────
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.offwhite }}>
-      <LinearGradient
-        colors={[colors.purple, colors.blush]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+    <View style={{ flex: 1, backgroundColor: dark.bg }}>
+      <View
         style={[
           s.headerGrad,
           {
@@ -566,6 +557,7 @@ export default function TripFormScreen() {
             paddingBottom: insets.bottom,
             borderBottomLeftRadius: 20,
             borderBottomRightRadius: 20,
+            backgroundColor: dark.pink,
           },
         ]}
       >
@@ -574,7 +566,7 @@ export default function TripFormScreen() {
             style={s.backBtn}
             onPress={() => (step > 1 ? back() : nav.back())}
           >
-            <Ionicons name="arrow-back" size={16} color={colors.white} />
+            <Ionicons name="arrow-back" size={16} color={dark.ink} />
           </TouchableOpacity>
           <View style={{ flex: 1 }}>
             <Text style={s.headerTitle}>{STEPS[step - 1].title}</Text>
@@ -582,12 +574,15 @@ export default function TripFormScreen() {
           </View>
           {isEdit && step === 1 && (
             <TouchableOpacity onPress={handleDelete}>
-              <Ionicons name="trash-outline" size={18} color={colors.white} />
+              <Image
+                source={require("../assets/images/icon-trash.png")}
+                style={{ width: 26, height: 26 }}
+              />
             </TouchableOpacity>
           )}
         </View>
         <ProgressBar step={step} total={3} />
-      </LinearGradient>
+      </View>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -610,7 +605,7 @@ export default function TripFormScreen() {
                   value={name}
                   onChangeText={setName}
                   placeholder="ex: Japão setembro 2025"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={dark.muted}
                 />
                 {errors.name && (
                   <Text
@@ -642,12 +637,12 @@ export default function TripFormScreen() {
                     value={destIn}
                     onChangeText={setDestIn}
                     placeholder="ex: Tóquio"
-                    placeholderTextColor={colors.muted}
+                    placeholderTextColor={dark.muted}
                     onSubmitEditing={addDest}
                     returnKeyType="done"
                   />
                   <TouchableOpacity style={s.addDestBtn} onPress={addDest}>
-                    <Ionicons name="add" size={18} color={colors.white} />
+                    <Ionicons name="add" size={18} color={dark.ink} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -663,7 +658,7 @@ export default function TripFormScreen() {
                   value={origin}
                   onChangeText={setOrigin}
                   placeholder="ex: Brasil"
-                  placeholderTextColor={colors.muted}
+                  placeholderTextColor={dark.muted}
                 />
               </View>
 
@@ -679,8 +674,8 @@ export default function TripFormScreen() {
                       ]}
                       value={depart}
                       onChangeText={(v) => setDepart(maskDate(v))}
-                      placeholder="AAAA-MM-DD"
-                      placeholderTextColor={colors.muted}
+                      placeholder="DD-MM-AAAA"
+                      placeholderTextColor={dark.muted}
                       keyboardType="number-pad"
                       maxLength={10}
                     />
@@ -699,8 +694,8 @@ export default function TripFormScreen() {
                       style={s.input}
                       value={ret}
                       onChangeText={(v) => setRet(maskDate(v))}
-                      placeholder="AAAA-MM-DD"
-                      placeholderTextColor={colors.muted}
+                      placeholder="DD-MM-AAAA"
+                      placeholderTextColor={dark.muted}
                       keyboardType="number-pad"
                       maxLength={10}
                     />
@@ -708,10 +703,9 @@ export default function TripFormScreen() {
                 </View>
                 {nights > 0 && (
                   <View style={s.nightsBadge}>
-                    <Ionicons
-                      name="moon-outline"
-                      size={12}
-                      color={colors.teal2}
+                    <Image
+                      source={require("../assets/images/icon-moon.png")}
+                      style={{ width: 16, height: 16 }}
                     />
                     <Text style={s.nightsBadgeText}>{nights} noites</Text>
                   </View>
@@ -741,10 +735,9 @@ export default function TripFormScreen() {
                         onPress={() => removeFlight(i)}
                         hitSlop={8}
                       >
-                        <Ionicons
-                          name="trash-outline"
-                          size={15}
-                          color={colors.accent}
+                        <Image
+                          source={require("../assets/images/icon-trash.png")}
+                          style={{ width: 22, height: 22 }}
                         />
                       </TouchableOpacity>
                     )}
@@ -783,11 +776,9 @@ export default function TripFormScreen() {
 
                   <Label text="número do voo" />
                   <View style={s.iconInputWrap}>
-                    <Ionicons
-                      name="airplane-outline"
-                      size={16}
-                      color={colors.muted}
-                      style={s.iconInput}
+                    <Image
+                      source={require("../assets/images/icon-plane.png")}
+                      style={[s.iconInput, { width: 18, height: 18 }]}
                     />
                     <TextInput
                       style={[s.input, s.inputIcon]}
@@ -796,12 +787,26 @@ export default function TripFormScreen() {
                         updateFlight(i, "flightNumber", t.toUpperCase())
                       }
                       placeholder="ex: JL047, G3 1234, LA8082"
-                      placeholderTextColor={colors.muted}
+                      placeholderTextColor={dark.muted}
                       autoCapitalize="characters"
                       autoCorrect={false}
                     />
                   </View>
                   <TipBox text="Encontre no e-mail de confirmação ou no app da companhia." />
+
+                  <Label
+                    text="data do voo (opcional)"
+                    hint="a partir dessa data, o destino já aparece automaticamente no itinerário"
+                  />
+                  <TextInput
+                    style={s.input}
+                    value={f.date ?? ""}
+                    onChangeText={(v) => updateFlight(i, "date", maskDate(v))}
+                    placeholder="DD-MM-AAAA"
+                    placeholderTextColor={dark.muted}
+                    keyboardType="number-pad"
+                    maxLength={10}
+                  />
                 </View>
               ))}
 
@@ -809,7 +814,7 @@ export default function TripFormScreen() {
                 <Ionicons
                   name="add-circle-outline"
                   size={16}
-                  color={colors.teal2}
+                  color={dark.blue}
                 />
                 <Text style={s.addEntryText}>adicionar voo</Text>
               </TouchableOpacity>
@@ -830,10 +835,9 @@ export default function TripFormScreen() {
                         onPress={() => removeHotel(i)}
                         hitSlop={8}
                       >
-                        <Ionicons
-                          name="trash-outline"
-                          size={15}
-                          color={colors.accent}
+                        <Image
+                          source={require("../assets/images/icon-trash.png")}
+                          style={{ width: 22, height: 22 }}
                         />
                       </TouchableOpacity>
                     )}
@@ -872,18 +876,16 @@ export default function TripFormScreen() {
 
                   <Label text="nome do hotel" />
                   <View style={s.iconInputWrap}>
-                    <Ionicons
-                      name="business-outline"
-                      size={16}
-                      color={colors.muted}
-                      style={s.iconInput}
+                    <Image
+                      source={require("../assets/images/icon-building.png")}
+                      style={[s.iconInput, { width: 18, height: 18 }]}
                     />
                     <TextInput
                       style={[s.input, s.inputIcon]}
                       value={h.name}
                       onChangeText={(t) => updateHotel(i, "name", t)}
                       placeholder="ex: Hotel Shinjuku Granbell"
-                      placeholderTextColor={colors.muted}
+                      placeholderTextColor={dark.muted}
                     />
                   </View>
 
@@ -896,7 +898,7 @@ export default function TripFormScreen() {
                       updateHotel(i, "conf", t.toUpperCase())
                     }
                     placeholder="ex: BK-39482910"
-                    placeholderTextColor={colors.muted}
+                    placeholderTextColor={dark.muted}
                     autoCapitalize="characters"
                     autoCorrect={false}
                   />
@@ -907,7 +909,7 @@ export default function TripFormScreen() {
                 <Ionicons
                   name="add-circle-outline"
                   size={16}
-                  color={colors.teal2}
+                  color={dark.blue}
                 />
                 <Text style={s.addEntryText}>adicionar hotel</Text>
               </TouchableOpacity>
@@ -948,10 +950,9 @@ export default function TripFormScreen() {
                     <View style={s.chipsWrap}>
                       {dests.map((d, i) => (
                         <View key={i} style={s.destChipReview}>
-                          <Ionicons
-                            name="location"
-                            size={10}
-                            color={colors.teal2}
+                          <Image
+                            source={require("../assets/images/icon-pin.png")}
+                            style={{ width: 16, height: 16 }}
                           />
                           <Text style={s.destChipReviewText}>{d}</Text>
                         </View>
@@ -975,15 +976,14 @@ export default function TripFormScreen() {
                             i === arr.length - 1 && { borderBottomWidth: 0 },
                           ]}
                         >
-                          <Ionicons
-                            name="airplane-outline"
-                            size={14}
-                            color={colors.muted}
+                          <Image
+                            source={require("../assets/images/icon-plane.png")}
+                            style={{ width: 16, height: 16 }}
                           />
                           <Text style={s.reviewLabel}>
                             {f.dest || `voo ${i + 1}`}
                           </Text>
-                          <Text style={[s.reviewValue, { color: colors.teal }]}>
+                          <Text style={[s.reviewValue, { color: dark.blue }]}>
                             {f.flightNumber}
                           </Text>
                         </View>
@@ -1006,10 +1006,9 @@ export default function TripFormScreen() {
                             i === arr.length - 1 && { borderBottomWidth: 0 },
                           ]}
                         >
-                          <Ionicons
-                            name="business-outline"
-                            size={14}
-                            color={colors.muted}
+                          <Image
+                            source={require("../assets/images/icon-building.png")}
+                            style={{ width: 16, height: 16 }}
                           />
                           <Text style={s.reviewLabel}>
                             {h.dest || `hotel ${i + 1}`}
@@ -1026,10 +1025,9 @@ export default function TripFormScreen() {
               {getVisaWarnings(dests, origin).length > 0 && (
                 <View style={s.visaCard}>
                   <View style={s.visaHeader}>
-                    <Ionicons
-                      name="alert-circle"
-                      size={16}
-                      color={colors.warning}
+                    <Image
+                      source={require("../assets/images/icon-warning.png")}
+                      style={{ width: 18, height: 18 }}
                     />
                     <Text style={s.visaTitle}>
                       atenção: visto pode ser necessário
@@ -1126,12 +1124,11 @@ const s = StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: "900",
-    color: colors.white,
+    color: dark.ink,
   },
   headerSub: {
     fontSize: 16,
-    color: "rgba(255,255,255,0.8)",
-    fontStyle: "italic",
+    color: "rgba(10,10,10,0.7)",
     marginTop: 2,
     marginBottom: 6,
   },
@@ -1143,12 +1140,12 @@ const s = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: "rgba(255,255,255,0.15)",
   },
-  dotDone: { backgroundColor: colors.sage },
+  dotDone: { backgroundColor: dark.green },
   dotActive: { backgroundColor: "rgba(255,255,255,0.6)" },
 
   progressContainer: {
     height: 4,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(0,0,0,0.15)",
     borderRadius: 2,
     overflow: "hidden",
     marginTop: spacing.sm,
@@ -1156,9 +1153,10 @@ const s = StyleSheet.create({
   progressBar: {
     height: "100%",
     borderRadius: 2,
+    backgroundColor: dark.ink,
   },
 
-  sheet: { flex: 1, backgroundColor: colors.offwhite },
+  sheet: { flex: 1, backgroundColor: dark.bg },
   sheetContent: {
     paddingHorizontal: spacing.lg,
     paddingTop: 4,
@@ -1170,15 +1168,15 @@ const s = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1.5,
     textTransform: "uppercase",
-    color: colors.muted,
+    color: dark.muted,
     marginBottom: spacing.sm,
     marginTop: spacing.md,
   },
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: dark.surface,
     borderRadius: radius.xl,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: dark.border,
     padding: spacing.lg,
     marginBottom: spacing.sm,
     ...shadow.sm,
@@ -1187,25 +1185,25 @@ const s = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: "800",
-    color: colors.navy,
+    color: dark.white,
     marginBottom: 3,
   },
   hint: {
     fontSize: 10,
-    color: colors.muted,
+    color: dark.muted,
     fontWeight: "600",
     marginBottom: 5,
   },
 
   input: {
-    backgroundColor: colors.offwhite,
+    backgroundColor: dark.surfaceAlt,
     borderRadius: radius.md,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: dark.border,
     padding: spacing.md,
     fontSize: 13,
     fontWeight: "600",
-    color: colors.navy,
+    color: dark.white,
   },
   iconInputWrap: { position: "relative" },
   iconInput: { position: "absolute", left: 11, top: 12, zIndex: 1 },
@@ -1215,14 +1213,14 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 6,
-    backgroundColor: colors.tealLight,
+    backgroundColor: "rgba(69,144,248,0.15)",
     borderRadius: radius.md,
     padding: spacing.sm,
     marginTop: spacing.sm,
   },
   tipText: {
     fontSize: 11,
-    color: colors.teal2,
+    color: dark.blue,
     fontWeight: "700",
     flex: 1,
     lineHeight: 16,
@@ -1241,17 +1239,17 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: radius.full,
-    backgroundColor: colors.navy,
+    backgroundColor: "rgba(69,144,248,0.15)",
   },
-  destChipText: { fontSize: 11, fontWeight: "700", color: colors.white },
-  destChipX: { fontSize: 15, color: "rgba(255,255,255,0.6)", lineHeight: 16 },
+  destChipText: { fontSize: 11, fontWeight: "700", color: dark.blue },
+  destChipX: { fontSize: 15, color: dark.blue, lineHeight: 16 },
 
   destRow: { flexDirection: "row", gap: 8, alignItems: "center" },
   addDestBtn: {
     width: 38,
     height: 38,
     borderRadius: radius.full,
-    backgroundColor: colors.teal,
+    backgroundColor: dark.blue,
     alignItems: "center",
     justifyContent: "center",
     ...shadow.teal,
@@ -1262,14 +1260,14 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: colors.tealLight,
+    backgroundColor: "rgba(69,144,248,0.15)",
     borderRadius: radius.full,
     paddingHorizontal: 10,
     paddingVertical: 4,
     alignSelf: "flex-start",
     marginTop: spacing.sm,
   },
-  nightsBadgeText: { fontSize: 11, fontWeight: "700", color: colors.teal2 },
+  nightsBadgeText: { fontSize: 11, fontWeight: "700", color: dark.blue },
 
   entryHeader: {
     flexDirection: "row",
@@ -1277,7 +1275,7 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: spacing.sm,
   },
-  entryTitle: { fontSize: 12, fontWeight: "800", color: colors.navy },
+  entryTitle: { fontSize: 12, fontWeight: "800", color: dark.white },
   addEntryBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -1287,25 +1285,27 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radius.full,
     borderWidth: 1.5,
-    borderColor: colors.teal,
-    backgroundColor: colors.tealLight,
+    borderColor: dark.blue,
+    backgroundColor: "rgba(69,144,248,0.15)",
     marginBottom: spacing.sm,
   },
-  addEntryText: { fontSize: 12, fontWeight: "700", color: colors.teal2 },
+  addEntryText: { fontSize: 12, fontWeight: "700", color: dark.blue },
 
   destPill: {
     paddingHorizontal: spacing.md,
     paddingVertical: 5,
     borderRadius: radius.full,
     borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.offwhite,
+    borderColor: dark.border,
+    backgroundColor: dark.surfaceAlt,
     marginRight: spacing.sm,
   },
-  destPillActive: { backgroundColor: colors.navy, borderColor: colors.navy },
-  destPillText: { fontSize: 11, fontWeight: "700", color: colors.muted },
-  destPillTextActive: { color: colors.white },
-
+  destPillActive: {
+    backgroundColor: "rgba(69,144,248,0.15)",
+    borderColor: dark.blue,
+  },
+  destPillText: { fontSize: 11, fontWeight: "700", color: dark.muted },
+  destPillTextActive: { color: dark.blue },
   navRow: { flexDirection: "row", gap: 8, marginTop: spacing.md },
   navBack: {
     flexDirection: "row",
@@ -1315,25 +1315,15 @@ const s = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: radius.lg,
     borderWidth: 1.5,
-    borderColor: colors.border,
-    backgroundColor: colors.white,
-    shadowColor: colors.navy,
+    borderColor: dark.border,
+    backgroundColor: dark.surface,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 2,
   },
-  navBackText: { fontSize: 13, fontWeight: "800", color: colors.navy },
-  navNextGrad: {
-    flex: 1,
-    borderRadius: radius.lg,
-    overflow: "hidden",
-    shadowColor: colors.blush,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
+  navBackText: { fontSize: 13, fontWeight: "800", color: dark.white },
   navNext: {
     flex: 1,
     flexDirection: "row",
@@ -1342,10 +1332,16 @@ const s = StyleSheet.create({
     gap: 8,
     paddingVertical: 13,
     paddingHorizontal: spacing.lg,
+    borderRadius: radius.lg,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
-  navNextText: { fontSize: 14, fontWeight: "900", color: colors.white },
+  navNextText: { fontSize: 14, fontWeight: "900", color: dark.ink },
 
   reviewHero: {
+    backgroundColor: dark.blue,
     borderRadius: radius.xl,
     padding: spacing.lg,
     paddingVertical: spacing.xl,
@@ -1353,7 +1349,7 @@ const s = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.25)",
-    shadowColor: colors.purple,
+    shadowColor: dark.pink,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
@@ -1409,8 +1405,7 @@ const s = StyleSheet.create({
   reviewHeroName: {
     fontSize: 22,
     fontWeight: "900",
-    color: colors.white,
-    fontStyle: "italic",
+    color: dark.white,
     marginBottom: 4,
     textShadowColor: "rgba(0,0,0,0.15)",
     textShadowOffset: { width: 0, height: 1 },
@@ -1429,11 +1424,11 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: radius.full,
-    backgroundColor: colors.tealLight,
+    backgroundColor: "rgba(69,144,248,0.15)",
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: dark.border,
   },
-  destChipReviewText: { fontSize: 11, fontWeight: "700", color: colors.teal2 },
+  destChipReviewText: { fontSize: 11, fontWeight: "700", color: dark.blue },
 
   reviewRow: {
     flexDirection: "row",
@@ -1441,15 +1436,15 @@ const s = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: dark.border,
   },
   reviewLabel: {
     fontSize: 11,
-    color: colors.muted,
+    color: dark.muted,
     fontWeight: "600",
     flex: 1,
   },
-  reviewValue: { fontSize: 12, fontWeight: "800", color: colors.navy },
+  reviewValue: { fontSize: 12, fontWeight: "800", color: dark.white },
 
   checkRow: {
     flexDirection: "row",
@@ -1457,17 +1452,17 @@ const s = StyleSheet.create({
     gap: 10,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: dark.border,
   },
   checkCircle: {
     width: 18,
     height: 18,
     borderRadius: 9,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: dark.border,
     flexShrink: 0,
   },
-  checkText: { flex: 1, fontSize: 12, fontWeight: "700", color: colors.navy },
+  checkText: { flex: 1, fontSize: 12, fontWeight: "700", color: dark.white },
   catPill: {
     paddingHorizontal: 7,
     paddingVertical: 2,
@@ -1476,9 +1471,9 @@ const s = StyleSheet.create({
   catPillText: { fontSize: 9, fontWeight: "800" },
 
   visaCard: {
-    backgroundColor: colors.warningLight,
+    backgroundColor: "rgba(236,226,46,0.12)",
     borderWidth: 1,
-    borderColor: colors.warningBorder,
+    borderColor: "rgba(236,226,46,0.35)",
     borderRadius: radius.xl,
     padding: spacing.md,
     marginBottom: spacing.sm,
@@ -1492,18 +1487,18 @@ const s = StyleSheet.create({
   visaTitle: {
     fontSize: 12,
     fontWeight: "800",
-    color: colors.warning,
+    color: dark.yellow,
     flex: 1,
   },
   visaMsg: {
     fontSize: 11,
     fontWeight: "600",
-    color: colors.warning,
+    color: dark.yellow,
     marginBottom: 3,
   },
   visaTip: {
     fontSize: 10,
-    color: colors.warning,
+    color: dark.yellow,
     fontWeight: "600",
     marginTop: spacing.xs,
     opacity: 0.8,

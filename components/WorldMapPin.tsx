@@ -1,7 +1,6 @@
-import { Ionicons } from "@expo/vector-icons";
 import { geoNaturalEarth1, geoPath } from "d3-geo";
 import React, { useEffect, useMemo, useState } from "react";
-import { LayoutChangeEvent, StyleSheet, Text, View } from "react-native";
+import { LayoutChangeEvent, StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -12,13 +11,21 @@ import Animated, {
 } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
 import { feature } from "topojson-client";
-import { colors, radius, shadow, spacing } from "../theme";
+import { dark, radius, shadow, spacing } from "../theme";
 import { resolveDestinationCoords as getPins } from "../utils/geo";
 
 const PIN_SIZE = 10;
 const PIN_HALF = PIN_SIZE / 2;
 
-function PulsingPin({ x, y, delay = 0 }: { x: number; y: number; delay?: number }) {
+function PulsingPin({
+  x,
+  y,
+  delay = 0,
+}: {
+  x: number;
+  y: number;
+  delay?: number;
+}) {
   const progress = useSharedValue(0);
 
   useEffect(() => {
@@ -30,7 +37,7 @@ function PulsingPin({ x, y, delay = 0 }: { x: number; y: number; delay?: number 
         false,
       ),
     );
-  }, []);
+  }, [delay, progress]);
 
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: 1 + progress.value * 3.5 }],
@@ -38,7 +45,10 @@ function PulsingPin({ x, y, delay = 0 }: { x: number; y: number; delay?: number 
   }));
 
   return (
-    <View pointerEvents="none" style={[s.pinAnchor, { left: x - PIN_HALF, top: y - PIN_HALF }]}>
+    <View
+      pointerEvents="none"
+      style={[s.pinAnchor, { left: x - PIN_HALF, top: y - PIN_HALF }]}
+    >
       <Animated.View style={[s.pinPulse, pulseStyle]} />
       <View style={s.pinDot}>
         <View style={s.pinCore} />
@@ -58,9 +68,11 @@ export function WorldMapPin({ destinations }: { destinations: string[] }) {
   const { countryPaths, pins } = useMemo(() => {
     if (dims.w === 0) return { countryPaths: [], pins: [] };
 
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const topology = require("world-atlas/countries-110m.json");
-    const countries = feature(topology, topology.objects.countries) as unknown as GeoJSON.FeatureCollection;
+    const countries = feature(
+      topology,
+      topology.objects.countries,
+    ) as unknown as GeoJSON.FeatureCollection;
 
     const proj = geoNaturalEarth1()
       .scale(dims.w / 6.3)
@@ -84,17 +96,13 @@ export function WorldMapPin({ destinations }: { destinations: string[] }) {
     <View style={s.card}>
       <View style={s.mapArea} onLayout={onLayout}>
         {dims.w > 0 && (
-          <Svg
-            width={dims.w}
-            height={dims.h}
-            style={StyleSheet.absoluteFill}
-          >
+          <Svg width={dims.w} height={dims.h} style={StyleSheet.absoluteFill}>
             {countryPaths.map((d, i) => (
               <Path
                 key={i}
                 d={d}
-                fill="#1A2C44"
-                stroke="#2E4460"
+                fill="#111113"
+                stroke="#2A2A2E"
                 strokeWidth="0.6"
               />
             ))}
@@ -106,19 +114,19 @@ export function WorldMapPin({ destinations }: { destinations: string[] }) {
         ))}
       </View>
 
-      <View style={s.footer}>
-        <Ionicons name="location" size={11} color={colors.teal} />
+      {/* <View style={s.footer}>
+        <Ionicons name="location" size={11} color={dark.blue} />
         <Text style={s.footerText} numberOfLines={1}>
           {destinations.join("  ·  ")}
         </Text>
-      </View>
+      </View> */}
     </View>
   );
 }
 
 const s = StyleSheet.create({
   card: {
-    backgroundColor: colors.navyDeep,
+    backgroundColor: dark.surface,
     borderRadius: radius.xl,
     overflow: "hidden",
     marginBottom: spacing.md,
@@ -142,16 +150,16 @@ const s = StyleSheet.create({
     width: PIN_SIZE,
     height: PIN_SIZE,
     borderRadius: PIN_SIZE / 2,
-    backgroundColor: colors.teal,
+    backgroundColor: dark.blue,
   },
   pinDot: {
     width: PIN_SIZE,
     height: PIN_SIZE,
     borderRadius: PIN_SIZE / 2,
-    backgroundColor: colors.teal,
+    backgroundColor: dark.blue,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: colors.teal,
+    shadowColor: dark.blue,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.9,
     shadowRadius: 6,
@@ -161,7 +169,7 @@ const s = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.white,
+    backgroundColor: dark.white,
   },
   footer: {
     flexDirection: "row",

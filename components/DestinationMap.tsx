@@ -1,21 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Keyboard,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import WebView from "react-native-webview";
-import { colors, radius, shadow, spacing } from "../theme";
+import { dark, radius, shadow, spacing } from "../theme";
 import { colorForCountry, DestinationCoord, resolveDestinationCoords } from "../utils/geo";
-import { GeoSearchResult, searchPlaces } from "../utils/geocode";
 
-function buildLeafletHtml(pins: DestinationCoord[]): string {
+function buildLeafletHtml(
+  pins: DestinationCoord[],
+  fallbackCenter?: { lat: number; lon: number },
+): string {
   const pinsJson = JSON.stringify(
     pins.map((p) => ({
       lat: p.lat,
@@ -25,13 +18,14 @@ function buildLeafletHtml(pins: DestinationCoord[]): string {
       color: colorForCountry(p.country),
     })),
   );
+  const fallbackCenterJson = JSON.stringify(fallbackCenter ?? null);
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    html, body, #map { height: 100%; margin: 0; padding: 0; background: #1A2C44; }
+    html, body, #map { height: 100%; margin: 0; padding: 0; background: #050505; }
     .trip-pin { width: 18px; height: 18px; border-radius: 50%; border: 3px solid #fff; }
     .leaflet-popup-content-wrapper { border-radius: 10px; }
     .leaflet-popup-content {
@@ -51,6 +45,7 @@ function buildLeafletHtml(pins: DestinationCoord[]): string {
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     var pins = ${pinsJson};
+    var fallbackCenter = ${fallbackCenterJson};
     var map = L.map('map', { zoomControl: false }).setView([0, 0], 2);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -77,10 +72,14 @@ function buildLeafletHtml(pins: DestinationCoord[]): string {
 
     // Zoom inicial: foca no destino mais recente (último pin) em vez de
     // tentar enquadrar tudo — assim, ao adicionar um novo destino, o mapa
-    // já abre nele em vez de voltar sempre pro primeiro.
+    // já abre nele em vez de voltar sempre pro primeiro. Sem nenhum pin
+    // ainda (ex: dia recém-criado), centraliza no destino cadastrado na
+    // viagem, pra não mostrar um mapa-múndi vazio.
     if (pins.length > 0) {
       var last = pins[pins.length - 1];
       map.setView([last.lat, last.lon], 12);
+    } else if (fallbackCenter) {
+      map.setView([fallbackCenter.lat, fallbackCenter.lon], 11);
     }
 
     window.focusDestination = function (i) {
@@ -104,19 +103,26 @@ function buildLeafletHtml(pins: DestinationCoord[]): string {
 export function DestinationMap({
   destinations,
   destinationCoords,
-  onAddDestination,
+  fallbackCenter,
   height = 220,
+  fullscreen = false,
 }: {
   destinations: string[];
   destinationCoords?: Record<string, { lat: number; lon: number; country?: string }>;
-  onAddDestination: (label: string, lat: number, lon: number, country?: string) => void;
+  // Centro pro mapa quando ainda não há nenhum pin (ex: dia sem destino
+  // pinado ainda) — normalmente o destino cadastrado na criação da viagem.
+  fallbackCenter?: { lat: number; lon: number };
   height?: number;
+  fullscreen?: boolean;
 }) {
   const pins = useMemo(
     () => resolveDestinationCoords(destinations, destinationCoords),
     [destinations, destinationCoords],
   );
-  const html = useMemo(() => buildLeafletHtml(pins), [pins]);
+  const html = useMemo(
+    () => buildLeafletHtml(pins, fallbackCenter),
+    [pins, fallbackCenter],
+  );
   const webviewRef = useRef<WebView>(null);
   const [active, setActive] = useState<number | null>(0);
 
@@ -125,35 +131,6 @@ export function DestinationMap({
   useEffect(() => {
     setActive(pins.length > 0 ? pins.length - 1 : null);
   }, [pins.length]);
-
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<GeoSearchResult[]>([]);
-  const [searching, setSearching] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const runSearch = async (q: string) => {
-    if (!q.trim()) {
-      setResults([]);
-      return;
-    }
-    setSearching(true);
-    const found = await searchPlaces(q);
-    setResults(found);
-    setSearching(false);
-  };
-
-  const handleQueryChange = (text: string) => {
-    setQuery(text);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(text), 500);
-  };
-
-  const pickResult = (r: GeoSearchResult) => {
-    onAddDestination(r.label, r.lat, r.lon, r.country);
-    setQuery("");
-    setResults([]);
-    Keyboard.dismiss();
-  };
 
   const focus = (i: number | null) => {
     setActive(i);
@@ -164,61 +141,17 @@ export function DestinationMap({
     webviewRef.current?.injectJavaScript(js);
   };
 
-  const mapKey = pins.map((p) => `${p.label}:${p.lat},${p.lon}:${p.country ?? ""}`).join("|");
+  const mapKey =
+    pins.map((p) => `${p.label}:${p.lat},${p.lon}:${p.country ?? ""}`).join("|") ||
+    `fallback:${fallbackCenter?.lat},${fallbackCenter?.lon}`;
 
   return (
-    <View style={s.card}>
-      <View style={s.searchBar}>
-        <Ionicons name="search" size={16} color={colors.muted} />
-        <TextInput
-          style={s.searchInput}
-          value={query}
-          onChangeText={handleQueryChange}
-          onSubmitEditing={() => runSearch(query)}
-          placeholder="Buscar destino para pinar no mapa..."
-          placeholderTextColor={colors.muted}
-          returnKeyType="search"
-        />
-        {searching && <ActivityIndicator size="small" color={colors.teal2} />}
-        {!searching && query.length > 0 && (
-          <TouchableOpacity
-            onPress={() => {
-              setQuery("");
-              setResults([]);
-            }}
-            hitSlop={8}
-          >
-            <Ionicons name="close-circle" size={16} color={colors.muted} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {results.length > 0 && (
-        <View style={s.resultsList}>
-          {results.map((r, i) => (
-            <TouchableOpacity
-              key={`${r.label}-${i}`}
-              style={s.resultRow}
-              onPress={() => pickResult(r)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="location-outline" size={14} color={colors.teal2} />
-              <Text style={s.resultText} numberOfLines={1}>
-                {r.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      )}
-      {!searching && query.trim().length > 0 && results.length === 0 && (
-        <Text style={s.noResults}>Nenhum destino encontrado.</Text>
-      )}
-
-      {pins.length === 0 ? (
-        <View style={s.fallback}>
-          <Ionicons name="map-outline" size={20} color={colors.muted} />
+    <View style={[s.card, fullscreen && s.cardFullscreen]}>
+      {pins.length === 0 && !fallbackCenter ? (
+        <View style={[s.fallback, fullscreen && s.fallbackFullscreen]}>
+          <Ionicons name="map-outline" size={20} color={dark.muted} />
           <Text style={s.fallbackText}>
-            Busque um destino acima para pinar no mapa.
+            Nenhum destino neste dia ainda — adicione um pela busca no drawer abaixo.
           </Text>
         </View>
       ) : (
@@ -226,7 +159,7 @@ export function DestinationMap({
           <WebView
             ref={webviewRef}
             source={{ html }}
-            style={[s.map, { height }]}
+            style={fullscreen ? StyleSheet.absoluteFillObject : [s.map, { height }]}
             originWhitelist={["*"]}
             scrollEnabled={false}
             bounces={false}
@@ -236,7 +169,7 @@ export function DestinationMap({
             key={mapKey}
           />
 
-          {pins.length > 1 && (
+          {!fullscreen && pins.length > 1 && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -250,7 +183,7 @@ export function DestinationMap({
                 <Ionicons
                   name="expand-outline"
                   size={12}
-                  color={active === null ? colors.white : colors.teal2}
+                  color={active === null ? dark.white : dark.blue}
                 />
                 <Text style={[s.chipText, active === null && s.chipTextActive]}>
                   todos
@@ -263,10 +196,9 @@ export function DestinationMap({
                   onPress={() => focus(i)}
                   activeOpacity={0.8}
                 >
-                  <Ionicons
-                    name="location"
-                    size={12}
-                    color={active === i ? colors.white : colorForCountry(p.country)}
+                  <Image
+                    source={require("../assets/images/icon-pin.png")}
+                    style={{ width: 18, height: 18 }}
                   />
                   <Text
                     style={[s.chipText, active === i && s.chipTextActive]}
@@ -286,58 +218,24 @@ export function DestinationMap({
 
 const s = StyleSheet.create({
   card: {
-    backgroundColor: colors.navyDeep,
+    backgroundColor: dark.surface,
     borderRadius: radius.xl,
     overflow: "hidden",
     marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.07)",
+    borderColor: dark.border,
     ...shadow.md,
   },
+  cardFullscreen: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 0,
+    borderWidth: 0,
+    margin: 0,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   map: {
-    backgroundColor: colors.navyDeep,
-  },
-
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: spacing.sm,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    marginHorizontal: spacing.sm,
-    marginTop: spacing.sm,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.white,
-    paddingVertical: 10,
-  },
-  resultsList: {
-    marginHorizontal: spacing.sm,
-    marginTop: 4,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderRadius: radius.lg,
-    overflow: "hidden",
-  },
-  resultRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 9,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,255,255,0.06)",
-  },
-  resultText: { flex: 1, fontSize: 12, fontWeight: "700", color: colors.white },
-  noResults: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.5)",
-    marginHorizontal: spacing.md,
-    marginTop: 6,
+    backgroundColor: dark.bg,
   },
 
   chipsRow: {
@@ -355,13 +253,13 @@ const s = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.08)",
     maxWidth: 140,
   },
-  chipActive: { backgroundColor: colors.teal },
+  chipActive: { backgroundColor: dark.blue },
   chipText: {
     fontSize: 11,
     fontWeight: "700",
     color: "rgba(255,255,255,0.75)",
   },
-  chipTextActive: { color: colors.white },
+  chipTextActive: { color: dark.white },
 
   fallback: {
     flexDirection: "row",
@@ -369,10 +267,17 @@ const s = StyleSheet.create({
     gap: spacing.sm,
     padding: spacing.lg,
   },
+  fallbackFullscreen: {
+    ...StyleSheet.absoluteFillObject,
+    flexDirection: "column",
+    justifyContent: "center",
+    paddingHorizontal: spacing.xxl,
+  },
   fallbackText: {
     flex: 1,
     fontSize: 12,
     fontWeight: "600",
     color: "rgba(255,255,255,0.5)",
+    textAlign: "center",
   },
 });

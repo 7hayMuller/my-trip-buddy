@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
-import { colors, spacing } from "../theme";
+import { colors, dark, spacing } from "../theme";
 import { RouteSegment } from "../types";
 
 interface PlaneRouteProps {
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: colors.teal,
+    backgroundColor: dark.blue,
     zIndex: 2,
   },
   line: {

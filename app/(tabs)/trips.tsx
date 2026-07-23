@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTrips } from "../../hooks/useTrips";
-import { colors, getTripImage, radius, shadow, spacing } from "../../theme";
+import { dark, getTripImage, radius, shadow, spacing } from "../../theme";
 import { Trip } from "../../types";
 
 function formatDate(s: string) {
@@ -33,18 +33,14 @@ function TripCard({ trip }: { trip: Trip }) {
     nav.push({ pathname: "/trip-form", params: { tripId: trip.id } });
 
   return (
-    <TouchableOpacity
-      style={s.card}
-      onPress={goToEdit}
-      activeOpacity={0.85}
-    >
+    <TouchableOpacity style={s.card} onPress={goToEdit} activeOpacity={0.85}>
       <Image
         source={{ uri: coverUri }}
         style={StyleSheet.absoluteFill}
         contentFit="cover"
       />
       <LinearGradient
-        colors={["rgba(17,30,53,0)", "rgba(17,30,53,0.85)"]}
+        colors={["rgba(5,5,5,0)", "rgba(5,5,5,0.9)"]}
         style={s.cardGradient}
       >
         <View style={s.cardInfo}>
@@ -62,7 +58,10 @@ function TripCard({ trip }: { trip: Trip }) {
           hitSlop={8}
           activeOpacity={0.8}
         >
-          <Ionicons name="pencil" size={15} color={colors.white} />
+          <Image
+            source={require("../../assets/images/icon-edit.png")}
+            style={{ width: 18, height: 18 }}
+          />
         </TouchableOpacity>
       </LinearGradient>
     </TouchableOpacity>
@@ -78,28 +77,20 @@ export default function TripsScreen() {
     <View style={s.root}>
       <View style={[s.header, { paddingTop: insets.top + 16 }]}>
         <View>
-          <Text style={s.headerEyebrow}>organize tudo</Text>
           <Text style={s.headerTitle}>suas viagens</Text>
         </View>
-        <LinearGradient
-          colors={[colors.sage, colors.teal]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={s.addBtnGrad}
+        <TouchableOpacity
+          style={s.addBtn}
+          onPress={() => nav.push("/trip-form")}
+          activeOpacity={0.8}
         >
-          <TouchableOpacity
-            style={s.addBtn}
-            onPress={() => nav.push("/trip-form")}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add" size={20} color={colors.white} />
-          </TouchableOpacity>
-        </LinearGradient>
+          <Ionicons name="add" size={20} color={dark.ink} />
+        </TouchableOpacity>
       </View>
 
       {trips.length === 0 ? (
         <View style={s.empty}>
-          <Ionicons name="airplane-outline" size={32} color={colors.muted} />
+          <Ionicons name="airplane-outline" size={32} color={dark.muted} />
           <Text style={s.emptyText}>Nenhuma viagem ainda.</Text>
           <TouchableOpacity
             style={s.emptyBtn}
@@ -125,7 +116,7 @@ export default function TripsScreen() {
 }
 
 const s = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.offwhite },
+  root: { flex: 1, backgroundColor: dark.bg },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -138,26 +129,26 @@ const s = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.8,
     textTransform: "uppercase",
-    color: colors.muted,
+    color: dark.muted,
     marginBottom: 3,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: "800",
-    color: colors.navy,
-    fontStyle: "italic",
+    color: dark.white,
   },
-  addBtnGrad: {
+  addBtn: {
     width: 44,
     height: 44,
     borderRadius: radius.full,
-    overflow: "hidden",
-    ...shadow.teal,
-  },
-  addBtn: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: dark.green,
+    shadowColor: dark.green,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
 
   list: {
@@ -169,6 +160,8 @@ const s = StyleSheet.create({
     borderRadius: radius.xl,
     overflow: "hidden",
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.6)",
     ...shadow.md,
   },
   cardGradient: {
@@ -182,8 +175,7 @@ const s = StyleSheet.create({
   cardName: {
     fontSize: 17,
     fontWeight: "800",
-    color: colors.white,
-    fontStyle: "italic",
+    color: dark.white,
   },
   cardDate: {
     fontSize: 12,
@@ -210,18 +202,18 @@ const s = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     fontWeight: "700",
-    color: colors.muted,
+    color: dark.muted,
   },
   emptyBtn: {
     marginTop: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: 12,
     borderRadius: radius.full,
-    backgroundColor: colors.navy,
+    backgroundColor: dark.green,
   },
   emptyBtnText: {
     fontSize: 13,
     fontWeight: "800",
-    color: colors.white,
+    color: dark.ink,
   },
 });
