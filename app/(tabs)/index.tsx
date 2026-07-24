@@ -202,6 +202,8 @@ export default function HomeScreen() {
       )
     : [];
 
+  // Fallback para hotéis sem checkIn/checkOut próprios (criados antes dessa
+  // feature): divide os dias da viagem igualmente entre os hotéis.
   const hotelDates = (
     index: number,
     total: number,
@@ -500,7 +502,10 @@ export default function HomeScreen() {
               (activeTrip.hotels ?? [])
                 .filter((h: any) => h.name.trim())
                 .map((hotel: any, i: any, arr: any) => {
-                  const { checkIn, checkOut } = hotelDates(i, arr.length);
+                  const { checkIn, checkOut } =
+                    hotel.checkIn && hotel.checkOut
+                      ? { checkIn: hotel.checkIn, checkOut: hotel.checkOut }
+                      : hotelDates(i, arr.length);
                   return (
                     <HotelCard
                       key={i}

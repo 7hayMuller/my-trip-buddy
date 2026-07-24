@@ -1,12 +1,12 @@
+import Slider from "@react-native-community/slider";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   Image,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TouchableOpacity,
   View,
@@ -15,11 +15,58 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "../../hooks/useAuth";
 import { useTrips } from "../../hooks/useTrips";
 import { dark, radius, spacing } from "../../theme";
-import { Milestone, MILESTONES } from "../../utils/notifications";
+import {
+  DEFAULT_REMINDER_DAYS,
+  MAX_REMINDER_DAYS,
+  MIN_REMINDER_DAYS,
+} from "../../utils/notifications";
+
+// Uma barra por lembrete: arrasta pra ajustar quantos dias antes da viagem
+// avisar. `live` guarda o valor durante o arraste (feedback imediato) — só
+// persiste (e reagenda a notificação) quando o dedo solta a barra, senão
+// cada pixel arrastado dispararia uma escrita no storage.
+function ReminderRow({
+  days,
+  onChange,
+  onRemove,
+}: {
+  days: number;
+  onChange: (days: number) => void;
+  onRemove: () => void;
+}) {
+  const [live, setLive] = useState(days);
+  useEffect(() => setLive(days), [days]);
+
+  return (
+    <View style={s.reminderRow}>
+      <View style={s.reminderHeader}>
+        <Text style={s.reminderValue}>
+          {live === 1 ? "1 dia antes (amanhã)" : `${live} dias antes`}
+        </Text>
+        <TouchableOpacity onPress={onRemove} hitSlop={8}>
+          <Ionicons name="close-circle" size={18} color={dark.muted} />
+        </TouchableOpacity>
+      </View>
+      <Slider
+        style={s.slider}
+        minimumValue={MIN_REMINDER_DAYS}
+        maximumValue={MAX_REMINDER_DAYS}
+        step={1}
+        value={days}
+        onValueChange={setLive}
+        onSlidingComplete={onChange}
+        minimumTrackTintColor={dark.blue}
+        maximumTrackTintColor={dark.surfaceAlt}
+        thumbTintColor={dark.blue}
+      />
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
-  const { notifSettings, toggleNotifMilestone } = useTrips();
+  const { notifSettings, addNotifReminder, updateNotifReminder, removeNotifReminder } =
+    useTrips();
   const nav = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -28,8 +75,8 @@ export default function ProfileScreen() {
     nav.replace("/login");
   };
 
-  const handleToggleMilestone = async (milestone: Milestone) => {
-    const result = await toggleNotifMilestone(milestone);
+  const handleAddReminder = async () => {
+    const result = await addNotifReminder(DEFAULT_REMINDER_DAYS);
     if (!result?.granted) {
       Alert.alert(
         "Permissão necessária",
@@ -109,19 +156,27 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {MILESTONES.map((m) => (
-            <View key={m} style={s.notifRow}>
-              <Text style={s.notifRowText}>
-                {m === 1 ? "1 dia antes (amanhã)" : `${m} dias antes`}
-              </Text>
-              <Switch
-                value={!!notifSettings?.[m]}
-                onValueChange={() => handleToggleMilestone(m)}
-                trackColor={{ false: dark.surfaceAlt, true: dark.blue }}
-                thumbColor={dark.white}
-              />
-            </View>
+          {(notifSettings ?? []).length === 0 && (
+            <Text style={s.notifEmpty}>nenhum aviso configurado ainda</Text>
+          )}
+
+          {((notifSettings ?? []) as number[]).map((days, i) => (
+            <ReminderRow
+              key={i}
+              days={days}
+              onChange={(d) => updateNotifReminder(i, d)}
+              onRemove={() => removeNotifReminder(i)}
+            />
           ))}
+
+          <TouchableOpacity
+            style={s.addReminderBtn}
+            onPress={handleAddReminder}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add-circle-outline" size={16} color={dark.blue} />
+            <Text style={s.addReminderText}>adicionar outro aviso</Text>
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity style={s.settingItem} activeOpacity={0.7}>
@@ -340,18 +395,45 @@ const s = StyleSheet.create({
     color: dark.muted,
     marginTop: 2,
   },
-  notifRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  notifEmpty: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: dark.muted,
     paddingVertical: spacing.sm,
     borderTopWidth: 1,
     borderTopColor: dark.border,
   },
-  notifRowText: {
+  reminderRow: {
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: dark.border,
+  },
+  reminderHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 2,
+  },
+  reminderValue: {
     fontSize: 13,
     fontWeight: "700",
     color: dark.white,
+  },
+  slider: {
+    width: "100%",
+    height: 32,
+  },
+  addReminderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingTop: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  addReminderText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: dark.blue,
   },
 
   settingIcon: {

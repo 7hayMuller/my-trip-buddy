@@ -92,16 +92,30 @@ export function TripProvider({ children }) {
     rescheduleTripCountdown(activeTrip, notifSettings);
   }, [activeTrip?.id, activeTrip?.name, activeTrip?.depart, notifSettings]);
 
-  const toggleNotifMilestone = async (milestone) => {
-    const turningOn = !notifSettings?.[milestone];
-    if (turningOn) {
-      const granted = await requestNotificationPermission();
-      if (!granted) return { granted: false };
-    }
-    const next = { ...notifSettings, [milestone]: !notifSettings?.[milestone] };
+  const persistNotifSettings = async (next) => {
     setNotifSettings(next);
     await saveNotificationSettings(next);
+  };
+
+  // Adiciona um novo lembrete (dias antes da viagem) à lista. Pede permissão
+  // de notificação na primeira vez — se negada, não adiciona nada.
+  const addNotifReminder = async (days) => {
+    const granted = await requestNotificationPermission();
+    if (!granted) return { granted: false };
+    await persistNotifSettings([...(notifSettings ?? []), days]);
     return { granted: true };
+  };
+
+  // Ajusta o valor (dias antes) de um lembrete já existente, pela posição
+  // dele na lista — usado ao soltar a barra deslizante.
+  const updateNotifReminder = async (index, days) => {
+    await persistNotifSettings(
+      (notifSettings ?? []).map((d, i) => (i === index ? days : d)),
+    );
+  };
+
+  const removeNotifReminder = async (index) => {
+    await persistNotifSettings((notifSettings ?? []).filter((_, i) => i !== index));
   };
 
   // Dispara sync para nuvem após qualquer mudança (fire-and-forget)
@@ -206,7 +220,9 @@ export function TripProvider({ children }) {
         addLooks,
         removeLook,
         notifSettings,
-        toggleNotifMilestone,
+        addNotifReminder,
+        updateNotifReminder,
+        removeNotifReminder,
         loaded,
         synced,
       }}

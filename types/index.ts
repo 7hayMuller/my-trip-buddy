@@ -11,6 +11,11 @@ export interface HotelEntry {
   name: string;
   conf: string;
   dest: string;
+  // Datas de check-in/check-out (YYYY-MM-DD), opcionais — hotéis criados
+  // antes dessa feature não têm esses campos e caem no fallback de divisão
+  // automática dos dias da viagem (ver hotelDates em app/(tabs)/index.tsx).
+  checkIn?: string;
+  checkOut?: string;
 }
 
 export interface Trip {

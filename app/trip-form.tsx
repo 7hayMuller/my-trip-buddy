@@ -24,9 +24,11 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { TripDateRangePicker } from "../components/TripDateRangePicker";
 import { useTrips } from "../hooks/useTrips";
 import { dark, radius, shadow, spacing } from "../theme";
 import { FlightEntry, HotelEntry, Trip } from "../types";
+import { getTripDays } from "../utils/dates";
 import { getDefaultCheckItems } from "../utils/storage";
 import { getVisaWarnings } from "../utils/visa";
 
@@ -437,6 +439,14 @@ export default function TripFormScreen() {
     }
   };
 
+  const fmtIso = (iso: string) => {
+    try {
+      return format(new Date(iso + "T00:00:00"), "d MMM", { locale: ptBR });
+    } catch {
+      return iso;
+    }
+  };
+
   const addDest = () => {
     const v = destIn.trim();
     if (!v) return;
@@ -457,6 +467,18 @@ export default function TripFormScreen() {
     setHotels((p) => p.filter((_, j) => j !== i));
   const addHotel = () =>
     setHotels((p) => [...p, { name: "", conf: "", dest: dests[0] ?? "" }]);
+  const setHotelStay = (i: number, checkIn: string | null, checkOut: string | null) =>
+    setHotels((p) =>
+      p.map((h, j) =>
+        j === i
+          ? { ...h, checkIn: checkIn ?? undefined, checkOut: checkOut ?? undefined }
+          : h,
+      ),
+    );
+
+  // Dias da viagem em ISO, usados pelo seletor de período de cada hotel —
+  // depart/ret aqui estão em DD-MM-AAAA (máscara de exibição do form).
+  const tripDayList = getTripDays(toIso(depart), toIso(ret) || toIso(depart));
 
   // ── validation ─────────────────────────────────────────────────────────────
 
@@ -889,6 +911,19 @@ export default function TripFormScreen() {
                     />
                   </View>
 
+                  {tripDayList.length > 0 && (
+                    <>
+                      <View style={{ height: spacing.md }} />
+                      <Label text="check-in / check-out" hint="opcional" />
+                      <TripDateRangePicker
+                        days={tripDayList}
+                        startKey={h.checkIn ?? null}
+                        endKey={h.checkOut ?? null}
+                        onChange={(start, end) => setHotelStay(i, start, end)}
+                      />
+                    </>
+                  )}
+
                   <View style={{ height: spacing.md }} />
                   <Label text="código de confirmação" hint="opcional" />
                   <TextInput
@@ -1013,9 +1048,16 @@ export default function TripFormScreen() {
                           <Text style={s.reviewLabel}>
                             {h.dest || `hotel ${i + 1}`}
                           </Text>
-                          <Text style={s.reviewValue} numberOfLines={1}>
-                            {h.name}
-                          </Text>
+                          <View style={{ alignItems: "flex-end" }}>
+                            <Text style={s.reviewValue} numberOfLines={1}>
+                              {h.name}
+                            </Text>
+                            {h.checkIn && h.checkOut && (
+                              <Text style={s.reviewStay}>
+                                {fmtIso(h.checkIn)} – {fmtIso(h.checkOut)}
+                              </Text>
+                            )}
+                          </View>
                         </View>
                       ))}
                   </View>
@@ -1445,6 +1487,7 @@ const s = StyleSheet.create({
     flex: 1,
   },
   reviewValue: { fontSize: 12, fontWeight: "800", color: dark.white },
+  reviewStay: { fontSize: 10, fontWeight: "600", color: dark.muted, marginTop: 2 },
 
   checkRow: {
     flexDirection: "row",

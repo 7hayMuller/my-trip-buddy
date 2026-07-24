@@ -3,10 +3,11 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { Trip } from "../types";
 
-export const MILESTONES = [50, 40, 30, 20, 10, 5, 1] as const;
-export type Milestone = (typeof MILESTONES)[number];
-
-export type NotificationSettings = Record<Milestone, boolean>;
+// Cada número é um lembrete ativo: "avisar X dias antes da viagem". Antes
+// disso os marcos eram fixos (50/40/30/20/10/5/1) com toggle liga/desliga —
+// agora o usuário ajusta livremente cada lembrete numa barra, então a lista
+// em si já representa os lembretes ativos (sem entrada = sem aviso).
+export type NotificationSettings = number[];
 
 const SETTINGS_KEY = "@wanderlust_notif_settings";
 // Prefixo usado no identifier de cada notificação agendada, pra conseguir
@@ -15,23 +16,28 @@ const SETTINGS_KEY = "@wanderlust_notif_settings";
 const NOTIF_PREFIX = "trip-countdown-";
 const CHANNEL_ID = "trip-countdown";
 
-const DEFAULT_SETTINGS: NotificationSettings = {
-  50: true,
-  40: true,
-  30: true,
-  20: true,
-  10: true,
-  5: true,
-  1: true,
-};
+export const MIN_REMINDER_DAYS = 1;
+export const MAX_REMINDER_DAYS = 90;
+export const DEFAULT_REMINDER_DAYS = 7;
+
+const DEFAULT_SETTINGS: NotificationSettings = [30, 7, 1];
 
 export async function loadNotificationSettings(): Promise<NotificationSettings> {
   try {
     const raw = await AsyncStorage.getItem(SETTINGS_KEY);
-    if (!raw) return { ...DEFAULT_SETTINGS };
-    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) };
+    if (!raw) return [...DEFAULT_SETTINGS];
+    const parsed = JSON.parse(raw);
+    // Formato antigo: { "50": true, "40": false, ... }. Migra pra lista dos
+    // marcos que estavam ligados.
+    if (!Array.isArray(parsed)) {
+      return Object.entries(parsed)
+        .filter(([, on]) => on)
+        .map(([days]) => Number(days))
+        .sort((a, b) => b - a);
+    }
+    return parsed;
   } catch {
-    return { ...DEFAULT_SETTINGS };
+    return [...DEFAULT_SETTINGS];
   }
 }
 
@@ -50,9 +56,9 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return requested.granted;
 }
 
-function messageFor(milestone: Milestone, tripName: string): string {
-  if (milestone === 1) return `${tripName} é amanhã! 🎉 Prepare a mala!`;
-  return `Faltam ${milestone} dias para ${tripName}! ✈️`;
+function messageFor(daysBefore: number, tripName: string): string {
+  if (daysBefore === 1) return `${tripName} é amanhã! 🎉 Prepare a mala!`;
+  return `Faltam ${daysBefore} dias para ${tripName}! ✈️`;
 }
 
 async function ensureAndroidChannel(): Promise<void> {
@@ -73,9 +79,9 @@ async function cancelScheduledCountdowns(): Promise<void> {
 }
 
 // Reagenda as notificações de contagem regressiva pra viagem informada,
-// conforme os marcos habilitados em `settings`. Cancela tudo que já estava
-// agendado antes — chamar de novo (viagem trocou, marco mudou) é sempre
-// seguro, nunca duplica.
+// uma por lembrete ativo em `settings`. Cancela tudo que já estava agendado
+// antes — chamar de novo (viagem trocou, lembrete mudou) é sempre seguro,
+// nunca duplica.
 export async function rescheduleTripCountdown(
   trip: Pick<Trip, "id" | "name" | "depart"> | null,
   settings: NotificationSettings,
@@ -92,17 +98,17 @@ export async function rescheduleTripCountdown(
   if (Number.isNaN(depart.getTime())) return;
   const now = new Date();
 
-  for (const milestone of MILESTONES) {
-    if (!settings[milestone]) continue;
+  for (const daysBefore of settings) {
+    if (daysBefore <= 0) continue;
     const triggerDate = new Date(depart);
-    triggerDate.setDate(triggerDate.getDate() - milestone);
+    triggerDate.setDate(triggerDate.getDate() - daysBefore);
     if (triggerDate <= now) continue;
 
     await Notifications.scheduleNotificationAsync({
-      identifier: `${NOTIF_PREFIX}${trip.id}-${milestone}`,
+      identifier: `${NOTIF_PREFIX}${trip.id}-${daysBefore}`,
       content: {
         title: "My Trip Buddy",
-        body: messageFor(milestone, trip.name),
+        body: messageFor(daysBefore, trip.name),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
