@@ -11,7 +11,7 @@ export interface HotelDetails {
   fetchedAt: number;
 }
 
-const GOOGLE_KEY = "AIzaSyBPutDyW8jr2qeVNgKxrnCoAvOI_UMQfmA";
+const GOOGLE_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY ?? "";
 const SV_BASE    = "https://maps.googleapis.com/maps/api/streetview";
 const CACHE_PREFIX = "@wanderlust_hotel_";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
