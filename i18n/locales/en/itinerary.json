@@ -1,0 +1,14 @@
+{
+  "noDestinationsThisDay": "No destinations for this day yet — search above.",
+  "otherDestinations": "Other destinations",
+  "eyebrow": "your itinerary",
+  "title": "itinerary",
+  "noActiveTrip": "No active trip yet.",
+  "createTrip": "create trip",
+  "offlineHint": "You're offline — showing only the day's list (no map and no searching for new spots).",
+  "dayDestinations": "day's destinations",
+  "openRouteHint": "tap a destination to open the route in Google Maps from your location",
+  "openDayRoute": "open day route",
+  "locationNotFoundTitle": "Location not found",
+  "locationNotFoundMessage": "Give us a moment to locate this destination and try again."
+}

@@ -1,0 +1,19 @@
+{
+  "selectedCountSub_one": "{{count}} look selected",
+  "selectedCountSub_other": "{{count}} looks selected",
+  "chooseLooksHint": "choose looks to wear on each day of your trip",
+  "savedThisDay": "Saved for this day ({{count}})",
+  "selectedSection": "Selected ({{count}})",
+  "gallery": "Gallery",
+  "pinterest": "Pinterest",
+  "offlineHint": "You're offline — searching for new inspiration is unavailable. Looks you've already saved are still up here.",
+  "inspirationSection": "Inspiration for this destination",
+  "searchPlaceholder": "Search for look inspiration...",
+  "searchError": "Search error.",
+  "noResults": "No inspiration found for \"{{query}}\"",
+  "envInfoBefore": "Add to your ",
+  "envInfoMiddle": "\n\nto see look inspiration here. Create one for free at ",
+  "saveCountLabel_one": "{{count}} look ready to save",
+  "saveCountLabel_other": "{{count}} looks ready to save",
+  "save": "Save"
+}

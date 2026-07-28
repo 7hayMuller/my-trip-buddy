@@ -3,6 +3,7 @@ import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import { format } from "date-fns";
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Image,
@@ -41,10 +42,11 @@ function DestinationRows({
   onOpenInMaps: (dest: string) => void;
   onRemove: (dest: string) => void;
 }) {
+  const { t } = useTranslation("itinerary");
   if (groups.length === 0) {
     return (
       <Text style={s.emptyDayText}>
-        Nenhum destino neste dia ainda — busque acima.
+        {t("noDestinationsThisDay")}
       </Text>
     );
   }
@@ -97,6 +99,7 @@ export default function ItineraryScreen() {
   const insets = useSafeAreaInsets();
   const isOnline = useNetworkStatus();
   const { activeTrip, updateTrip } = useTrips();
+  const { t } = useTranslation("itinerary");
 
   const destinations: string[] = activeTrip?.destinations ?? [];
   // Pontos de visitação do roteiro (buscados no drawer abaixo) — separados de
@@ -308,8 +311,8 @@ export default function ItineraryScreen() {
     const point = combinedCoords[dest];
     if (!point) {
       Alert.alert(
-        "Localização não encontrada",
-        "Aguarde um instante enquanto localizamos esse destino e tente novamente.",
+        t("locationNotFoundTitle"),
+        t("locationNotFoundMessage"),
       );
       return;
     }
@@ -376,7 +379,7 @@ export default function ItineraryScreen() {
           const order: string[] = [];
           const map: Record<string, string[]> = {};
           for (const dest of destinationsForSelectedDay) {
-            const key = countryOf(dest) ?? "Outros destinos";
+            const key = countryOf(dest) ?? t("otherDestinations");
             if (!map[key]) {
               map[key] = [];
               order.push(key);
@@ -395,19 +398,22 @@ export default function ItineraryScreen() {
         <>
           <View style={[s.header, { paddingTop: insets.top + 16 }]}>
             <View>
-              <Text style={s.headerEyebrow}>seu roteiro</Text>
-              <Text style={s.headerTitle}>itinerário</Text>
+              <Text style={s.headerEyebrow}>{t("eyebrow")}</Text>
+              <Text style={s.headerTitle}>{t("title")}</Text>
             </View>
           </View>
           <View style={s.empty}>
-            <Ionicons name="map-outline" size={32} color={dark.muted} />
-            <Text style={s.emptyText}>Nenhuma viagem ativa ainda.</Text>
+            <Image
+              source={require("../../assets/images/icon-country.png")}
+              style={{ width: 40, height: 40 }}
+            />
+            <Text style={s.emptyText}>{t("noActiveTrip")}</Text>
             <TouchableOpacity
               style={s.emptyBtn}
               onPress={() => nav.push("/trip-form")}
               activeOpacity={0.8}
             >
-              <Text style={s.emptyBtnText}>criar viagem</Text>
+              <Text style={s.emptyBtnText}>{t("createTrip")}</Text>
             </TouchableOpacity>
           </View>
         </>
@@ -415,16 +421,15 @@ export default function ItineraryScreen() {
         <>
           <View style={[s.header, { paddingTop: insets.top + 16 }]}>
             <View>
-              <Text style={s.headerEyebrow}>seu roteiro</Text>
-              <Text style={s.headerTitle}>itinerário</Text>
+              <Text style={s.headerEyebrow}>{t("eyebrow")}</Text>
+              <Text style={s.headerTitle}>{t("title")}</Text>
             </View>
           </View>
 
           <View style={s.offlineBanner}>
             <Ionicons name="cloud-offline-outline" size={16} color={dark.yellow} />
             <Text style={s.offlineBannerText}>
-              Você está sem internet — mostrando só a lista do dia (sem mapa
-              e sem busca de novos pontos).
+              {t("offlineHint")}
             </Text>
           </View>
 
@@ -480,11 +485,10 @@ export default function ItineraryScreen() {
               android_keyboardInputMode="adjustResize"
             >
               <View style={s.sheetHeader}>
-                <Text style={s.sectionLabel}>destinos do dia</Text>
+                <Text style={s.sectionLabel}>{t("dayDestinations")}</Text>
                 <DestinationSearch onAddDestination={handleAddDestination} />
                 <Text style={s.sectionHint}>
-                  toque em um destino para abrir a rota no Google Maps a partir
-                  da sua localização
+                  {t("openRouteHint")}
                 </Text>
                 {destinationsForSelectedDay.length > 1 && (
                   <TouchableOpacity
@@ -493,7 +497,7 @@ export default function ItineraryScreen() {
                     activeOpacity={0.8}
                   >
                     <Ionicons name="navigate" size={14} color={dark.ink} />
-                    <Text style={s.dayRouteBtnText}>abrir rota do dia</Text>
+                    <Text style={s.dayRouteBtnText}>{t("openDayRoute")}</Text>
                   </TouchableOpacity>
                 )}
               </View>

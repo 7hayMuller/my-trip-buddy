@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Image,
@@ -18,6 +19,7 @@ export function DestinationSearch({
 }: {
   onAddDestination: (label: string, lat: number, lon: number, country?: string) => void;
 }) {
+  const { t } = useTranslation("destinationSearch");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GeoSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -56,7 +58,7 @@ export function DestinationSearch({
           value={query}
           onChangeText={handleQueryChange}
           onSubmitEditing={() => runSearch(query)}
-          placeholder="Buscar destino para adicionar..."
+          placeholder={t("placeholder")}
           placeholderTextColor={dark.muted}
           returnKeyType="search"
         />
@@ -95,7 +97,7 @@ export function DestinationSearch({
         </View>
       )}
       {!searching && query.trim().length > 0 && results.length === 0 && (
-        <Text style={s.noResults}>Nenhum destino encontrado.</Text>
+        <Text style={s.noResults}>{t("noResults")}</Text>
       )}
     </View>
   );

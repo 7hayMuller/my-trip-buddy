@@ -1,9 +1,13 @@
 import React, { useMemo } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import i18n from "../i18n";
 import { dark, radius, spacing } from "../theme";
 import { TripDay } from "../utils/dates";
 
-const WEEKDAY_HEADERS = ["D", "S", "T", "Q", "Q", "S", "S"];
+const WEEKDAY_HEADERS: Record<string, string[]> = {
+  pt: ["D", "S", "T", "Q", "Q", "S", "S"],
+  en: ["S", "M", "T", "W", "T", "F", "S"],
+};
 
 interface MonthBlock {
   key: string;
@@ -54,6 +58,7 @@ export function TripCalendarRange({
   onSelectDay: (key: string) => void;
 }) {
   const months = useMemo(() => buildMonths(days), [days]);
+  const weekdayHeaders = WEEKDAY_HEADERS[i18n.language] ?? WEEKDAY_HEADERS.pt;
 
   if (months.length === 0) return null;
 
@@ -66,7 +71,7 @@ export function TripCalendarRange({
             {month.year}
           </Text>
           <View style={s.weekRow}>
-            {WEEKDAY_HEADERS.map((w, i) => (
+            {weekdayHeaders.map((w, i) => (
               <Text key={i} style={s.weekHeaderText}>
                 {w}
               </Text>

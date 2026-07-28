@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { differenceInDays, format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { enUS, ptBR } from "date-fns/locale";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Animated,
@@ -24,6 +25,7 @@ import HotelCard from "../../components/HotelCard";
 import { WorldMapPin } from "../../components/WorldMapPin";
 import { useCountdown } from "../../hooks/useCountdown";
 import { useTrips } from "../../hooks/useTrips";
+import i18n from "../../i18n";
 import {
   colors,
   dark as DARK,
@@ -39,13 +41,13 @@ import { getVisaWarnings } from "../../utils/visa";
 
 /* ─── category pill colors ───────────────────────────────────── */
 
-const CAT_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  doc: { bg: DARK.green, text: DARK.ink, label: "docs" },
-  fly: { bg: DARK.blue, text: DARK.ink, label: "voo" },
-  stay: { bg: DARK.yellow, text: DARK.ink, label: "hotel" },
-  look: { bg: DARK.pink, text: DARK.ink, label: "looks" },
-  misc: { bg: "rgba(255,255,255,0.08)", text: DARK.muted, label: "outro" },
-  visa: { bg: DARK.yellow, text: DARK.ink, label: "visto" },
+const CAT_STYLE: Record<string, { bg: string; text: string; labelKey: string }> = {
+  doc: { bg: DARK.green, text: DARK.ink, labelKey: "categoryDocs" },
+  fly: { bg: DARK.blue, text: DARK.ink, labelKey: "categoryFlight" },
+  stay: { bg: DARK.yellow, text: DARK.ink, labelKey: "categoryHotel" },
+  look: { bg: DARK.pink, text: DARK.ink, labelKey: "categoryLooks" },
+  misc: { bg: "rgba(255,255,255,0.08)", text: DARK.muted, labelKey: "categoryOther" },
+  visa: { bg: DARK.yellow, text: DARK.ink, labelKey: "categoryVisa" },
 };
 
 /* ─── small reusable pieces ─────────────────────────────────── */
@@ -108,6 +110,7 @@ function CheckRow({
   onToggle: () => void;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation("home");
   const cs = CAT_STYLE[item.cat] ?? CAT_STYLE.misc;
   return (
     <View style={s.checkRow}>
@@ -129,7 +132,7 @@ function CheckRow({
         {item.text}
       </Text>
       <View style={[s.catPill, { backgroundColor: cs.bg }]}>
-        <Text style={[s.catPillText, { color: cs.text }]}>{cs.label}</Text>
+        <Text style={[s.catPillText, { color: cs.text }]}>{t(cs.labelKey)}</Text>
       </View>
       <TouchableOpacity onPress={onDelete} hitSlop={8} style={s.deleteBtn}>
         <Ionicons name="close" size={12} color={DARK.muted} />
@@ -143,6 +146,7 @@ function CheckRow({
 export default function HomeScreen() {
   const nav = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation("home");
 
   const {
     trips,
@@ -183,7 +187,9 @@ export default function HomeScreen() {
 
   const formatDate = (s: string) => {
     try {
-      return format(new Date(s + "T00:00:00"), "d 'de' MMM", { locale: ptBR });
+      const locale = i18n.language === "en" ? enUS : ptBR;
+      const pattern = i18n.language === "en" ? "d MMM" : "d 'de' MMM";
+      return format(new Date(s + "T00:00:00"), pattern, { locale });
     } catch {
       return s;
     }
@@ -242,16 +248,16 @@ export default function HomeScreen() {
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert(
-          "Permissão necessária",
+          t("permissionRequiredTitle"),
           canAskAgain
-            ? "Precisamos de acesso às suas fotos para trocar a capa da viagem."
-            : "O acesso às fotos foi negado. Ative a permissão de fotos para este app nas configurações do celular.",
+            ? t("photoPermissionHint")
+            : t("photoPermissionDenied"),
           canAskAgain
-            ? [{ text: "Ok" }]
+            ? [{ text: t("ok") }]
             : [
-                { text: "Cancelar", style: "cancel" },
+                { text: t("cancel"), style: "cancel" },
                 {
-                  text: "Abrir configurações",
+                  text: t("openSettings"),
                   onPress: () => Linking.openSettings(),
                 },
               ],
@@ -282,10 +288,7 @@ export default function HomeScreen() {
       await updateTrip(activeTrip.id, { coverImage });
     } catch (err) {
       console.error("Erro ao trocar capa da viagem:", err);
-      Alert.alert(
-        "Não foi possível trocar a capa",
-        "Tente novamente em alguns instantes.",
-      );
+      Alert.alert(t("changeCoverErrorTitle"), t("tryAgain"));
     }
   };
 
@@ -307,15 +310,15 @@ export default function HomeScreen() {
       >
         <View style={s.heroTopRow}>
           <View>
-            <Text style={s.heroEyebrow}>Vai ser demais!</Text>
+            <Text style={s.heroEyebrow}>{t("heroEyebrow")}</Text>
             <Text style={s.heroTitle} numberOfLines={1}>
-              {activeTrip?.name ?? "Adicione uma viagem"}
+              {activeTrip?.name ?? t("addTripFallback")}
             </Text>
             {activeTrip && (
               <Text style={s.heroSub}>
                 {formatDate(activeTrip.depart)} – {formatDate(activeTrip.ret)}
                 {"  ·  "}
-                {nights} noites
+                {t("nights", { count: nights })}
               </Text>
             )}
           </View>
@@ -341,13 +344,13 @@ export default function HomeScreen() {
 
         {activeTrip && (
           <View style={s.cdPill}>
-            <CdBox value={cd.days} label="dias" />
+            <CdBox value={cd.days} label={t("days")} />
             <Text style={s.cdSep}>:</Text>
-            <CdBox value={cd.hours} label="hrs" />
+            <CdBox value={cd.hours} label={t("hours")} />
             <Text style={s.cdSep}>:</Text>
-            <CdBox value={cd.minutes} label="min" />
+            <CdBox value={cd.minutes} label={t("minutes")} />
             <Text style={s.cdSep}>:</Text>
-            <CdBox value={cd.seconds} label="seg" />
+            <CdBox value={cd.seconds} label={t("seconds")} />
           </View>
         )}
       </View>
@@ -389,27 +392,34 @@ export default function HomeScreen() {
         <View style={s.statRow}>
           <StatCard
             value={String(activeTrip?.destinations?.length ?? 0)}
-            label="destinos"
+            label={t("destinations")}
             color={DARK.green}
           />
-          <StatCard value={String(nights)} label="noites" color={DARK.pink} />
+          <StatCard value={String(nights)} label={t("nightsLabel")} color={DARK.pink} />
           <StatCard
             value={
               activeChecks.length > 0
                 ? `${doneChecks}/${activeChecks.length}`
                 : "–"
             }
-            label="checklist"
+            label={t("checklist")}
             color={DARK.blue}
           />
         </View>
 
+        {activeTrip && (activeTrip.destinations?.length ?? 0) > 0 && (
+          <>
+            <Text style={s.secLabel}>{t("destinationOnMap")}</Text>
+            <WorldMapPin destinations={activeTrip.destinations ?? []} />
+          </>
+        )}
+
         {activeTrip && (
           <>
-            <Text style={s.secLabel}>orçamento</Text>
+            <Text style={s.secLabel}>{t("budget")}</Text>
             <TouchableOpacity
               style={s.budgetCard}
-              onPress={() => nav.push("/budget")}
+              onPress={() => nav.push({ pathname: "/budget" })}
               activeOpacity={0.85}
             >
               {activeTrip.budgetTotal ? (
@@ -445,7 +455,7 @@ export default function HomeScreen() {
                     style={s.budgetCardIcon}
                   />
                   <Text style={s.budgetCardEmpty}>
-                    definir orçamento da viagem
+                    {t("setTripBudget")}
                   </Text>
                 </View>
               )}
@@ -459,17 +469,10 @@ export default function HomeScreen() {
           </>
         )}
 
-        {activeTrip && (activeTrip.destinations?.length ?? 0) > 0 && (
-          <>
-            <Text style={s.secLabel}>destino no mapa</Text>
-            <WorldMapPin destinations={activeTrip.destinations ?? []} />
-          </>
-        )}
-
         {activeTrip && (
           <>
             <View style={s.secRow}>
-              <Text style={s.secLabel}>hospedagens</Text>
+              <Text style={s.secLabel}>{t("accommodations")}</Text>
               <SectionAddButton
                 icon="add"
                 color={DARK.blue}
@@ -494,8 +497,11 @@ export default function HomeScreen() {
                 }
                 activeOpacity={0.8}
               >
-                <Ionicons name="bed-outline" size={20} color={DARK.blue} />
-                <Text style={s.looksEmptyText}>Adicionar hospedagem</Text>
+                <Image
+                  source={require("../../assets/images/icon-building.png")}
+                  style={{ width: 22, height: 22 }}
+                />
+                <Text style={s.looksEmptyText}>{t("addAccommodation")}</Text>
                 <Ionicons name="chevron-forward" size={16} color={DARK.muted} />
               </TouchableOpacity>
             ) : (
@@ -529,7 +535,7 @@ export default function HomeScreen() {
                 style={{ width: 18, height: 18 }}
               />
               <Text style={s.visaTitle}>
-                atenção: visto pode ser necessário
+                {t("visaWarningTitle")}
               </Text>
             </View>
             {visaWarnings.map((w, i) => (
@@ -543,7 +549,7 @@ export default function HomeScreen() {
         {activeTrip && (
           <>
             <View style={s.secRow}>
-              <Text style={s.secLabel}>checklist</Text>
+              <Text style={s.secLabel}>{t("checklist")}</Text>
               <SectionAddButton
                 icon={showAddItem ? "close" : "add"}
                 color={DARK.pink}
@@ -554,7 +560,7 @@ export default function HomeScreen() {
             <View style={s.card}>
               {activeChecks.length === 0 && (
                 <Text style={s.emptyCheck}>
-                  Nenhum item no checklist ainda.
+                  {t("noChecklistItems")}
                 </Text>
               )}
               {activeChecks.map((item: CheckItem, i: number) => (
@@ -572,7 +578,7 @@ export default function HomeScreen() {
                     style={s.addInput}
                     value={newItemText}
                     onChangeText={setNewItemText}
-                    placeholder="novo item..."
+                    placeholder={t("newItemPlaceholder")}
                     placeholderTextColor={DARK.muted}
                     autoFocus
                     returnKeyType="done"
@@ -583,7 +589,7 @@ export default function HomeScreen() {
                     onPress={handleAddItem}
                     activeOpacity={0.8}
                   >
-                    <Text style={s.addBtnText}>adicionar</Text>
+                    <Text style={s.addBtnText}>{t("add")}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -617,29 +623,31 @@ export default function HomeScreen() {
         {/* Ternário explícito — evita `""` como text node em View no web */}
         {activeTrip?.flightConf || activeTrip?.hotelConf ? (
           <>
-            <Text style={s.secLabel}>confirmações</Text>
+            <Text style={s.secLabel}>{t("confirmations")}</Text>
             <View style={s.confRow}>
               {activeTrip.flightConf ? (
                 <View style={s.confCard}>
                   <View style={s.confLabelRow}>
-                    <Ionicons
-                      name="airplane-outline"
-                      size={12}
-                      color={DARK.muted}
+                    <Image
+                      source={require("../../assets/images/icon-plane.png")}
+                      style={{ width: 14, height: 14 }}
                     />
-                    <Text style={s.confLabel}>voo</Text>
+                    <Text style={s.confLabel}>{t("flight")}</Text>
                   </View>
                   <Text style={[s.confValue, { color: DARK.blue }]}>
                     {activeTrip.flightConf}
                   </Text>
-                  <Text style={s.confSub}>confirmado</Text>
+                  <Text style={s.confSub}>{t("confirmed")}</Text>
                 </View>
               ) : null}
               {activeTrip.hotelConf ? (
                 <View style={s.confCard}>
                   <View style={s.confLabelRow}>
-                    <Ionicons name="bed-outline" size={12} color={DARK.muted} />
-                    <Text style={s.confLabel}>hotel</Text>
+                    <Image
+                      source={require("../../assets/images/icon-building.png")}
+                      style={{ width: 14, height: 14 }}
+                    />
+                    <Text style={s.confLabel}>{t("hotel")}</Text>
                   </View>
                   <Text style={[s.confValue, { color: DARK.pink }]}>
                     {activeTrip.hotelConf}
@@ -686,7 +694,7 @@ export default function HomeScreen() {
                   style={{ width: 22, height: 22 }}
                 />
               </View>
-              <Text style={s.menuItemText}>Alterar foto da capa</Text>
+              <Text style={s.menuItemText}>{t("changeCoverPhoto")}</Text>
               <Ionicons name="chevron-forward" size={16} color={DARK.muted} />
             </TouchableOpacity>
 
@@ -711,7 +719,7 @@ export default function HomeScreen() {
                   style={{ width: 22, height: 22 }}
                 />
               </View>
-              <Text style={s.menuItemText}>Editar viagem</Text>
+              <Text style={s.menuItemText}>{t("editTrip")}</Text>
               <Ionicons name="chevron-forward" size={16} color={DARK.muted} />
             </TouchableOpacity>
           </TouchableOpacity>
@@ -721,7 +729,7 @@ export default function HomeScreen() {
             activeOpacity={0.7}
             onPress={() => setShowEditMenu(false)}
           >
-            <Text style={s.menuCancelText}>cancelar</Text>
+            <Text style={s.menuCancelText}>{t("cancelLower")}</Text>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>

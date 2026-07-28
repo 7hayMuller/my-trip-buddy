@@ -1,0 +1,23 @@
+{
+  "errorTitle": "Error",
+  "emailRequiredTitle": "Email required",
+  "emailRequiredMessage": "Enter your email to continue",
+  "linkSentTitle": "Link sent!",
+  "linkSentMessage": "Check your email ({{email}}) and tap the link to sign in",
+  "ok": "OK",
+  "sendLinkError": "Error sending link",
+  "codeRequiredTitle": "Code required",
+  "codeRequiredMessage": "Enter the code you received by email",
+  "invalidCode": "Invalid code",
+  "continueWithGoogle": "Continue with Google",
+  "or": "or",
+  "emailLabel": "Email",
+  "emailPlaceholder": "you@email.com",
+  "sendAccessLink": "Send access link",
+  "terms": "We'll send you a secure link\nby email",
+  "codeSentTitle": "Code sent! ✅",
+  "codeSentSubtitle": "Check your email and enter the 6-digit code",
+  "codeLabel": "Code",
+  "verifyCode": "Verify code",
+  "useAnotherEmail": "Use another email"
+}

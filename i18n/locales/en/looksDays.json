@@ -1,0 +1,7 @@
+{
+  "daySubtitle": "looks saved by day",
+  "unassignedTitle": "No date",
+  "emptyDay": "no looks yet",
+  "lookCount_one": "{{count}} look",
+  "lookCount_other": "{{count}} looks"
+}

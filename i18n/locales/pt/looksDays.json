@@ -1,0 +1,7 @@
+{
+  "daySubtitle": "looks salvos por dia",
+  "unassignedTitle": "Sem data",
+  "emptyDay": "nenhum look ainda",
+  "lookCount_one": "{{count}} look",
+  "lookCount_other": "{{count}} looks"
+}

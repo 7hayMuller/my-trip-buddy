@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import WebView from "react-native-webview";
 import { dark, radius, shadow, spacing } from "../theme";
@@ -123,6 +124,7 @@ export function DestinationMap({
     () => buildLeafletHtml(pins, fallbackCenter),
     [pins, fallbackCenter],
   );
+  const { t } = useTranslation("destinationMap");
   const webviewRef = useRef<WebView>(null);
   const [active, setActive] = useState<number | null>(0);
 
@@ -150,9 +152,7 @@ export function DestinationMap({
       {pins.length === 0 && !fallbackCenter ? (
         <View style={[s.fallback, fullscreen && s.fallbackFullscreen]}>
           <Ionicons name="map-outline" size={20} color={dark.muted} />
-          <Text style={s.fallbackText}>
-            Nenhum destino neste dia ainda — adicione um pela busca no drawer abaixo.
-          </Text>
+          <Text style={s.fallbackText}>{t("noDestinationYet")}</Text>
         </View>
       ) : (
         <>
@@ -186,7 +186,7 @@ export function DestinationMap({
                   color={active === null ? dark.white : dark.blue}
                 />
                 <Text style={[s.chipText, active === null && s.chipTextActive]}>
-                  todos
+                  {t("all")}
                 </Text>
               </TouchableOpacity>
               {pins.map((p, i) => (

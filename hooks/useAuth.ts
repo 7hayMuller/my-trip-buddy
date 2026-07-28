@@ -1,6 +1,7 @@
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { useEffect, useState } from "react";
 import { Platform } from "react-native";
+import i18n from "../i18n";
 import { supabase } from "../utils/supabase";
 
 export function useAuth() {
@@ -35,7 +36,7 @@ export function useAuth() {
   }
 
   async function loginWithEmail(email: string) {
-    if (!supabase) return { error: "Supabase não configurado" };
+    if (!supabase) return { error: i18n.t("auth:supabaseNotConfigured") };
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
@@ -44,12 +45,12 @@ export function useAuth() {
       if (error) throw error;
       return { success: true };
     } catch (e: any) {
-      return { error: e.message || "Erro ao enviar código" };
+      return { error: e.message || i18n.t("auth:sendCodeError") };
     }
   }
 
   async function verifyCode(email: string, token: string) {
-    if (!supabase) return { error: "Supabase não configurado" };
+    if (!supabase) return { error: i18n.t("auth:supabaseNotConfigured") };
     try {
       const { data, error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
       if (error) throw error;
@@ -57,14 +58,14 @@ export function useAuth() {
         setUser(data.session.user);
         return { success: true };
       }
-      return { error: "Código inválido" };
+      return { error: i18n.t("auth:invalidCode") };
     } catch (e: any) {
-      return { error: e.message || "Código inválido" };
+      return { error: e.message || i18n.t("auth:invalidCode") };
     }
   }
 
   async function loginWithGoogle(): Promise<{ success?: boolean; error?: string }> {
-    if (!supabase) return { error: "Supabase não configurado" };
+    if (!supabase) return { error: i18n.t("auth:supabaseNotConfigured") };
 
     try {
       if (Platform.OS === "android") {
@@ -74,7 +75,7 @@ export function useAuth() {
       const response = await GoogleSignin.signIn();
       const idToken = response.data?.idToken;
 
-      if (!idToken) return { error: "Não foi possível obter o token do Google" };
+      if (!idToken) return { error: i18n.t("auth:noGoogleToken") };
 
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: "google",
@@ -86,9 +87,9 @@ export function useAuth() {
         setUser(data.session.user);
         return { success: true };
       }
-      return { error: "Erro ao criar sessão" };
+      return { error: i18n.t("auth:createSessionError") };
     } catch (e: any) {
-      return { error: e.message || "Erro ao fazer login com Google" };
+      return { error: e.message || i18n.t("auth:googleLoginError") };
     }
   }
 

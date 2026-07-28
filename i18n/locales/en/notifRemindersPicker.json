@@ -1,0 +1,15 @@
+{
+  "title": "notify in advance",
+  "noAlertSelected": "no alert selected",
+  "daysBefore_one": "{{count}} day before",
+  "daysBefore_other": "{{count}} days before",
+  "daysBeforeTomorrow": "1 day before (tomorrow)",
+  "alertsSelected_one": "{{count}} alert selected",
+  "alertsSelected_other": "{{count}} alerts selected",
+  "custom": "custom:",
+  "daysBeforeSuffix": "days before",
+  "done": "done",
+  "notifTomorrow": "{{tripName}} is tomorrow! 🎉 Pack your bags!",
+  "notifCountdown": "{{daysBefore}} days left until {{tripName}}! ✈️",
+  "channelName": "Trip countdown"
+}

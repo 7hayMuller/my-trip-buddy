@@ -1,0 +1,12 @@
+{
+  "title": "meu perfil",
+  "defaultUserName": "Usuário",
+  "settings": "Configurações",
+  "notifications": "Notificações",
+  "notificationsHint": "avisos de contagem regressiva da sua próxima viagem",
+  "privacy": "Privacidade",
+  "helpSupport": "Ajuda & Suporte",
+  "logout": "Sair da Conta",
+  "notifPermissionRequiredTitle": "Permissão necessária",
+  "notifPermissionRequiredMessage": "Ative as notificações para este app nas configurações do celular pra receber os avisos de contagem regressiva."
+}

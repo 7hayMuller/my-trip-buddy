@@ -1,0 +1,23 @@
+{
+  "errorTitle": "Erro",
+  "emailRequiredTitle": "Email obrigatório",
+  "emailRequiredMessage": "Digite seu email para continuar",
+  "linkSentTitle": "Link enviado!",
+  "linkSentMessage": "Verifique seu email ({{email}}) e clique no link para acessar",
+  "ok": "OK",
+  "sendLinkError": "Erro ao enviar link",
+  "codeRequiredTitle": "Código obrigatório",
+  "codeRequiredMessage": "Digite o código recebido no email",
+  "invalidCode": "Código inválido",
+  "continueWithGoogle": "Continuar com Google",
+  "or": "ou",
+  "emailLabel": "Email",
+  "emailPlaceholder": "seu@email.com",
+  "sendAccessLink": "Enviar link de acesso",
+  "terms": "Enviaremos um link seguro\npara seu email",
+  "codeSentTitle": "Código enviado! ✅",
+  "codeSentSubtitle": "Verifique seu email e digite o código de 6 dígitos",
+  "codeLabel": "Código",
+  "verifyCode": "Verificar código",
+  "useAnotherEmail": "Usar outro email"
+}

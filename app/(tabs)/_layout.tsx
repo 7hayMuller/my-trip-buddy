@@ -1,10 +1,12 @@
 import { dark as DARK } from "@/theme";
 import { Tabs } from "expo-router";
 import { Image } from "react-native";
+import { useTranslation } from "react-i18next";
 
 const TAB_ICON_SIZE = 30;
 
 export default function TabLayout() {
+  const { t } = useTranslation("tabs");
   return (
     <Tabs
       screenOptions={{
@@ -22,7 +24,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Home",
+          title: t("home"),
           tabBarActiveTintColor: DARK.blue,
           tabBarIcon: () => (
             <Image
@@ -35,7 +37,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="trips"
         options={{
-          title: "Viagens",
+          title: t("trips"),
           tabBarActiveTintColor: DARK.green,
           tabBarIcon: () => (
             <Image
@@ -48,7 +50,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="itinerary"
         options={{
-          title: "Itinerário",
+          title: t("itinerary"),
           tabBarActiveTintColor: DARK.pink,
           tabBarIcon: () => (
             <Image
@@ -61,7 +63,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="looks"
         options={{
-          title: "Looks",
+          title: t("looks"),
           tabBarActiveTintColor: DARK.yellow,
           tabBarIcon: () => (
             <Image
@@ -74,7 +76,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Perfil",
+          title: t("profile"),
           tabBarActiveTintColor: DARK.blue,
           tabBarIcon: () => (
             <Image

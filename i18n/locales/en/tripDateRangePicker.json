@@ -1,0 +1,8 @@
+{
+  "selectPeriod": "select period",
+  "selectDeparture": "select checkout",
+  "checkIn": "check-in",
+  "checkOut": "check-out",
+  "stayPeriod": "stay period",
+  "clear": "clear"
+}

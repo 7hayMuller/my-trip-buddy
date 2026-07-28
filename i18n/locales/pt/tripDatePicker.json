@@ -1,0 +1,6 @@
+{
+  "selectDay": "selecionar dia",
+  "dateFormat": "{{day}} de {{month}}",
+  "title": "dia da viagem",
+  "clear": "limpar"
+}

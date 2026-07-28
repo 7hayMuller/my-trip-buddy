@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   loadNotificationSettings,
+  MILESTONES,
   requestNotificationPermission,
   rescheduleTripCountdown,
   saveNotificationSettings,
@@ -97,25 +98,34 @@ export function TripProvider({ children }) {
     await saveNotificationSettings(next);
   };
 
-  // Adiciona um novo lembrete (dias antes da viagem) à lista. Pede permissão
-  // de notificação na primeira vez — se negada, não adiciona nada.
-  const addNotifReminder = async (days) => {
-    const granted = await requestNotificationPermission();
-    if (!granted) return { granted: false };
-    await persistNotifSettings([...(notifSettings ?? []), days]);
+  // Liga/desliga um marco fixo (checkbox da lista) — pede permissão de
+  // notificação só quando está ligando, nunca ao desligar.
+  const toggleNotifDay = async (days) => {
+    const isOn = (notifSettings ?? []).includes(days);
+    if (!isOn) {
+      const granted = await requestNotificationPermission();
+      if (!granted) return { granted: false };
+    }
+    const next = isOn
+      ? notifSettings.filter((d) => d !== days)
+      : [...(notifSettings ?? []), days];
+    await persistNotifSettings(next);
     return { granted: true };
   };
 
-  // Ajusta o valor (dias antes) de um lembrete já existente, pela posição
-  // dele na lista — usado ao soltar a barra deslizante.
-  const updateNotifReminder = async (index, days) => {
-    await persistNotifSettings(
-      (notifSettings ?? []).map((d, i) => (i === index ? days : d)),
+  // Define o único lembrete personalizado (fora dos marcos fixos) — substitui
+  // qualquer valor personalizado anterior. `days: null` remove o lembrete.
+  const setCustomNotifDay = async (days) => {
+    const withoutCustom = (notifSettings ?? []).filter((d) =>
+      MILESTONES.includes(d),
     );
-  };
-
-  const removeNotifReminder = async (index) => {
-    await persistNotifSettings((notifSettings ?? []).filter((_, i) => i !== index));
+    if (days != null) {
+      const granted = await requestNotificationPermission();
+      if (!granted) return { granted: false };
+    }
+    const next = days != null ? [...withoutCustom, days] : withoutCustom;
+    await persistNotifSettings(next);
+    return { granted: true };
   };
 
   // Dispara sync para nuvem após qualquer mudança (fire-and-forget)
@@ -220,9 +230,8 @@ export function TripProvider({ children }) {
         addLooks,
         removeLook,
         notifSettings,
-        addNotifReminder,
-        updateNotifReminder,
-        removeNotifReminder,
+        toggleNotifDay,
+        setCustomNotifDay,
         loaded,
         synced,
       }}

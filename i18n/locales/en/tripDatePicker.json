@@ -1,0 +1,6 @@
+{
+  "selectDay": "select day",
+  "dateFormat": "{{month}} {{day}}",
+  "title": "trip day",
+  "clear": "clear"
+}

@@ -1,0 +1,15 @@
+{
+  "title": "avisar com antecedência",
+  "noAlertSelected": "nenhum aviso selecionado",
+  "daysBefore_one": "{{count}} dia antes",
+  "daysBefore_other": "{{count}} dias antes",
+  "daysBeforeTomorrow": "1 dia antes (amanhã)",
+  "alertsSelected_one": "{{count}} aviso selecionado",
+  "alertsSelected_other": "{{count}} avisos selecionados",
+  "custom": "personalizado:",
+  "daysBeforeSuffix": "dias antes",
+  "done": "concluir",
+  "notifTomorrow": "{{tripName}} é amanhã! 🎉 Prepare a mala!",
+  "notifCountdown": "Faltam {{daysBefore}} dias para {{tripName}}! ✈️",
+  "channelName": "Contagem regressiva da viagem"
+}

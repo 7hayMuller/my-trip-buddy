@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
+import "../i18n";
 
 import { useAuth } from "../hooks/useAuth";
 import { TripProvider } from "../hooks/useTrips";

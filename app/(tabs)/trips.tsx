@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { enUS, ptBR } from "date-fns/locale";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   ScrollView,
   StyleSheet,
@@ -14,12 +15,15 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTrips } from "../../hooks/useTrips";
+import i18n from "../../i18n";
 import { dark, getTripImage, radius, shadow, spacing } from "../../theme";
 import { Trip } from "../../types";
 
 function formatDate(s: string) {
   try {
-    return format(new Date(s + "T00:00:00"), "d 'de' MMM", { locale: ptBR });
+    const locale = i18n.language === "en" ? enUS : ptBR;
+    const pattern = i18n.language === "en" ? "d MMM" : "d 'de' MMM";
+    return format(new Date(s + "T00:00:00"), pattern, { locale });
   } catch {
     return s;
   }
@@ -72,12 +76,13 @@ export default function TripsScreen() {
   const nav = useRouter();
   const insets = useSafeAreaInsets();
   const { trips } = useTrips();
+  const { t } = useTranslation("trips");
 
   return (
     <View style={s.root}>
       <View style={[s.header, { paddingTop: insets.top + 16 }]}>
         <View>
-          <Text style={s.headerTitle}>suas viagens</Text>
+          <Text style={s.headerTitle}>{t("title")}</Text>
         </View>
         <TouchableOpacity
           style={s.addBtn}
@@ -90,14 +95,17 @@ export default function TripsScreen() {
 
       {trips.length === 0 ? (
         <View style={s.empty}>
-          <Ionicons name="airplane-outline" size={32} color={dark.muted} />
-          <Text style={s.emptyText}>Nenhuma viagem ainda.</Text>
+          <Image
+            source={require("../../assets/images/icon-plane.png")}
+            style={{ width: 40, height: 40 }}
+          />
+          <Text style={s.emptyText}>{t("noTrips")}</Text>
           <TouchableOpacity
             style={s.emptyBtn}
             onPress={() => nav.push("/trip-form")}
             activeOpacity={0.8}
           >
-            <Text style={s.emptyBtnText}>criar primeira viagem</Text>
+            <Text style={s.emptyBtnText}>{t("createFirstTrip")}</Text>
           </TouchableOpacity>
         </View>
       ) : (

@@ -1,0 +1,8 @@
+{
+  "title": "trip looks",
+  "noActiveTrip": "No active trip yet.",
+  "createTrip": "create trip",
+  "addDestinationsHint": "Add destinations in the Itinerary tab to organize looks by country.",
+  "goToItinerary": "go to itinerary",
+  "folderHint": "tap a folder to add looks for that country"
+}

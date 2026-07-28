@@ -6,9 +6,10 @@
 
 import { Ionicons } from "@expo/vector-icons";
 import { differenceInDays, format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { enUS, ptBR } from "date-fns/locale";
 import React, { useEffect, useState } from "react";
 import { Image } from "expo-image";
+import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
     Linking,
@@ -17,6 +18,7 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
+import i18n from "../i18n";
 import { dark, getDestImage, radius, shadow, spacing } from "../theme";
 import {
     clearHotelCache,
@@ -45,6 +47,7 @@ export default function HotelCard({
   confirmationCode,
   onEdit,
 }: HotelCardProps) {
+  const { t } = useTranslation("hotelCard");
   const [details, setDetails] = useState<HotelDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [photoFailed, setPhotoFailed] = useState(false);
@@ -71,7 +74,10 @@ export default function HotelCard({
 
   const fmt = (d: string) => {
     try {
-      return format(new Date(d + "T00:00:00"), "d 'de' MMM", { locale: ptBR });
+      const isEn = i18n.language === "en";
+      return format(new Date(d + "T00:00:00"), isEn ? "MMM d" : "d 'de' MMM", {
+        locale: isEn ? enUS : ptBR,
+      });
     } catch {
       return d;
     }
@@ -180,15 +186,15 @@ export default function HotelCard({
         {/* check-in / noites / check-out */}
         <View style={hc.datesRow}>
           <View style={hc.dateBlock}>
-            <Text style={hc.dateLabel}>check-in</Text>
+            <Text style={hc.dateLabel}>{t("checkIn")}</Text>
             <Text style={hc.dateValue}>{fmt(checkIn)}</Text>
           </View>
           <View style={hc.nightsBlock}>
             <Text style={hc.nightsNum}>{nights}</Text>
-            <Text style={hc.nightsLabel}>noites</Text>
+            <Text style={hc.nightsLabel}>{t("nights")}</Text>
           </View>
           <View style={[hc.dateBlock, { alignItems: "flex-end" }]}>
-            <Text style={hc.dateLabel}>check-out</Text>
+            <Text style={hc.dateLabel}>{t("checkOut")}</Text>
             <Text style={hc.dateValue}>{fmt(checkOut)}</Text>
           </View>
         </View>
@@ -201,7 +207,7 @@ export default function HotelCard({
               size={12}
               color={dark.muted}
             />
-            <Text style={hc.confLabel}>confirmação</Text>
+            <Text style={hc.confLabel}>{t("confirmation")}</Text>
             <Text style={hc.confCode}>{confirmationCode}</Text>
           </View>
         ) : null}

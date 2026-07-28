@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { enUS, ptBR } from "date-fns/locale";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Image,
   Modal,
@@ -10,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import i18n from "../i18n";
 import { dark, radius, shadow, spacing } from "../theme";
 import { TripDay } from "../utils/dates";
 import { TripCalendarRange } from "./TripCalendarRange";
@@ -23,7 +25,7 @@ export function TripDateRangePicker({
   startKey,
   endKey,
   onChange,
-  placeholder = "selecionar período",
+  placeholder,
 }: {
   days: TripDay[];
   startKey: string | null;
@@ -31,16 +33,20 @@ export function TripDateRangePicker({
   onChange: (start: string | null, end: string | null) => void;
   placeholder?: string;
 }) {
+  const { t } = useTranslation("tripDateRangePicker");
   const [open, setOpen] = useState(false);
   const startDay = days.find((d) => d.key === startKey);
   const endDay = days.find((d) => d.key === endKey);
 
-  const fmt = (d: TripDay) => format(d.date, "d MMM", { locale: ptBR });
+  const fmt = (d: TripDay) => {
+    const isEn = i18n.language === "en";
+    return format(d.date, isEn ? "MMM d" : "d MMM", { locale: isEn ? enUS : ptBR });
+  };
   const label = startDay
     ? endDay
       ? `${fmt(startDay)} – ${fmt(endDay)}`
-      : `${fmt(startDay)} – selecionar saída`
-    : placeholder;
+      : `${fmt(startDay)} – ${t("selectDeparture")}`
+    : (placeholder ?? t("selectPeriod"));
 
   const handleSelectDay = (key: string) => {
     if (!startKey || (startKey && endKey)) {
@@ -97,14 +103,14 @@ export function TripDateRangePicker({
             <View style={s.sheetHeader}>
               <Text style={s.title}>
                 {!startKey
-                  ? "check-in"
+                  ? t("checkIn")
                   : !endKey
-                    ? "check-out"
-                    : "período da estadia"}
+                    ? t("checkOut")
+                    : t("stayPeriod")}
               </Text>
               {startDay && (
                 <TouchableOpacity onPress={handleClear}>
-                  <Text style={s.clearText}>limpar</Text>
+                  <Text style={s.clearText}>{t("clear")}</Text>
                 </TouchableOpacity>
               )}
             </View>

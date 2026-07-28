@@ -1,0 +1,14 @@
+{
+  "noDestinationsThisDay": "Nenhum destino neste dia ainda — busque acima.",
+  "otherDestinations": "Outros destinos",
+  "eyebrow": "seu roteiro",
+  "title": "itinerário",
+  "noActiveTrip": "Nenhuma viagem ativa ainda.",
+  "createTrip": "criar viagem",
+  "offlineHint": "Você está sem internet — mostrando só a lista do dia (sem mapa e sem busca de novos pontos).",
+  "dayDestinations": "destinos do dia",
+  "openRouteHint": "toque em um destino para abrir a rota no Google Maps a partir da sua localização",
+  "openDayRoute": "abrir rota do dia",
+  "locationNotFoundTitle": "Localização não encontrada",
+  "locationNotFoundMessage": "Aguarde um instante enquanto localizamos esse destino e tente novamente."
+}

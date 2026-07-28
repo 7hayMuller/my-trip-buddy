@@ -1,0 +1,19 @@
+{
+  "selectedCountSub_one": "{{count}} look selecionado",
+  "selectedCountSub_other": "{{count}} looks selecionados",
+  "chooseLooksHint": "escolha looks para usar em cada dia da sua viagem",
+  "savedThisDay": "Salvos neste dia ({{count}})",
+  "selectedSection": "Selecionados ({{count}})",
+  "gallery": "Galeria",
+  "pinterest": "Pinterest",
+  "offlineHint": "Você está sem internet — busca de novas inspirações indisponível. Os looks já salvos continuam aqui em cima.",
+  "inspirationSection": "Inspirações para o destino",
+  "searchPlaceholder": "Buscar inspiração de look...",
+  "searchError": "Erro na busca.",
+  "noResults": "Nenhuma inspiração encontrada para \"{{query}}\"",
+  "envInfoBefore": "Adicione ao ",
+  "envInfoMiddle": "\n\npara ver inspirações de looks aqui. Crie grátis em ",
+  "saveCountLabel_one": "{{count}} look pronto para salvar",
+  "saveCountLabel_other": "{{count}} looks prontos para salvar",
+  "save": "Salvar"
+}

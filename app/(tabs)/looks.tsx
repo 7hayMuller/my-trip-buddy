@@ -1,7 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,7 +23,12 @@ const FOLDER_COLORS = [dark.blue, dark.green, dark.pink, dark.yellow];
 export default function LooksScreen() {
   const nav = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation("looks");
+  const { t: tCommon } = useTranslation("common");
   const { activeTrip, activeLooks } = useTrips();
+
+  const displayCountry = (country: string) =>
+    country === OUTROS_COUNTRY ? tCommon("other") : country;
 
   const destinations: string[] = activeTrip?.destinations ?? [];
   const countryOf = (dest: string): string | undefined =>
@@ -46,40 +52,44 @@ export default function LooksScreen() {
     ).length;
 
   const openFolder = (country: string) =>
-    nav.push({ pathname: "/pinterest-picker", params: { country } });
+    nav.push({ pathname: "/looks-days", params: { country } });
 
   return (
     <View style={s.root}>
       <View style={[s.header, { paddingTop: insets.top + 16 }]}>
         <View>
-          <Text style={s.headerTitle}>looks da viagem</Text>
+          <Text style={s.headerTitle}>{t("title")}</Text>
         </View>
       </View>
 
       {!activeTrip ? (
         <View style={s.empty}>
-          <Ionicons name="shirt-outline" size={32} color={dark.muted} />
-          <Text style={s.emptyText}>Nenhuma viagem ativa ainda.</Text>
+          <Image
+            source={require("../../assets/images/icon-tshirt.png")}
+            style={{ width: 40, height: 40 }}
+          />
+          <Text style={s.emptyText}>{t("noActiveTrip")}</Text>
           <TouchableOpacity
             style={s.emptyBtn}
             onPress={() => nav.push("/trip-form")}
             activeOpacity={0.8}
           >
-            <Text style={s.emptyBtnText}>criar viagem</Text>
+            <Text style={s.emptyBtnText}>{t("createTrip")}</Text>
           </TouchableOpacity>
         </View>
       ) : folders.length === 0 ? (
         <View style={s.empty}>
-          <Ionicons name="folder-open-outline" size={32} color={dark.muted} />
-          <Text style={s.emptyText}>
-            Adicione destinos na aba Itinerário para organizar looks por país.
-          </Text>
+          <Image
+            source={require("../../assets/images/icon-gallery.png")}
+            style={{ width: 40, height: 40 }}
+          />
+          <Text style={s.emptyText}>{t("addDestinationsHint")}</Text>
           <TouchableOpacity
             style={s.emptyBtn}
             onPress={() => nav.push("/itinerary")}
             activeOpacity={0.8}
           >
-            <Text style={s.emptyBtnText}>ir para itinerário</Text>
+            <Text style={s.emptyBtnText}>{t("goToItinerary")}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -88,15 +98,13 @@ export default function LooksScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Text style={s.tripLabel}>{activeTrip.name}</Text>
-          <Text style={s.hint}>
-            toque numa pasta para adicionar looks daquele país
-          </Text>
+          <Text style={s.hint}>{t("folderHint")}</Text>
 
           <View style={s.grid}>
             {folders.map((country, i) => (
               <FolderCard
                 key={country}
-                label={country}
+                label={displayCountry(country)}
                 color={FOLDER_COLORS[i % FOLDER_COLORS.length]}
                 count={countFor(country)}
                 onPress={() => openFolder(country)}

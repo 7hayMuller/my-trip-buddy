@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { differenceInDays, format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { enUS, ptBR } from "date-fns/locale";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Image,
@@ -24,6 +25,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import i18n from "../i18n";
 import { TripDateRangePicker } from "../components/TripDateRangePicker";
 import { useTrips } from "../hooks/useTrips";
 import { dark, radius, shadow, spacing } from "../theme";
@@ -33,12 +35,8 @@ import { getDefaultCheckItems } from "../utils/storage";
 import { getVisaWarnings } from "../utils/visa";
 
 // ─── step config ──────────────────────────────────────────────────────────────
-
-const STEPS = [
-  { title: "Sobre sua viagem", subtitle: "Para onde você vai e quando" },
-  { title: "Voos e hotéis", subtitle: "Suas reservas por destino" },
-  { title: "Revisão", subtitle: "Confirme os dados" },
-] as const;
+// Título/subtítulo de cada step vêm de i18n (namespace tripForm) — ver
+// STEPS() abaixo, montada dentro do componente com o `t` já resolvido.
 
 // ─── date mask: auto-inserts dashes → DD-MM-AAAA ──────────────────────────────
 // A viagem continua guardada internamente em ISO (YYYY-MM-DD) — é o que todo
@@ -138,6 +136,7 @@ function NavButtons({
   nextLabel: string;
   nextIcon: keyof typeof Ionicons.glyphMap;
 }) {
+  const { t } = useTranslation("tripForm");
   return (
     <View style={s.navRow}>
       {step > 1 && (
@@ -147,7 +146,7 @@ function NavButtons({
           activeOpacity={0.8}
         >
           <Ionicons name="arrow-back" size={16} color={dark.white} />
-          <Text style={s.navBackText}>voltar</Text>
+          <Text style={s.navBackText}>{t("back")}</Text>
         </TouchableOpacity>
       )}
       <TouchableOpacity
@@ -236,12 +235,12 @@ function getDestTheme(destinations: string[]): DestTheme {
 }
 
 const CAT_STYLE: Record<string, { bg: string; text: string; label: string }> = {
-  doc: { bg: dark.green, text: dark.ink, label: "docs" },
-  fly: { bg: dark.blue, text: dark.ink, label: "voo" },
-  stay: { bg: dark.yellow, text: dark.ink, label: "hotel" },
-  look: { bg: dark.pink, text: dark.ink, label: "looks" },
-  misc: { bg: "rgba(255,255,255,0.08)", text: dark.muted, label: "outro" },
-  visa: { bg: dark.yellow, text: dark.ink, label: "visto" },
+  doc: { bg: dark.green, text: dark.ink, label: i18n.t("tripForm:catDocs") },
+  fly: { bg: dark.blue, text: dark.ink, label: i18n.t("tripForm:catFlight") },
+  stay: { bg: dark.yellow, text: dark.ink, label: i18n.t("tripForm:catStay") },
+  look: { bg: dark.pink, text: dark.ink, label: i18n.t("tripForm:catLooks") },
+  misc: { bg: "rgba(255,255,255,0.08)", text: dark.muted, label: i18n.t("tripForm:catOther") },
+  visa: { bg: dark.yellow, text: dark.ink, label: i18n.t("tripForm:catVisa") },
 };
 
 function ReviewHero({
@@ -259,6 +258,7 @@ function ReviewHero({
   nights: number;
   fmtDate: (d: string) => string;
 }) {
+  const { t } = useTranslation("tripForm");
   const theme = getDestTheme(destinations);
   const shimmerX = useSharedValue(-200);
 
@@ -296,7 +296,7 @@ function ReviewHero({
         <Text style={s.reviewHeroSub}>
           {fmtDate(depart)}
           {ret ? ` – ${fmtDate(ret)}` : ""}
-          {nights > 0 ? `  ·  ${nights} noites` : ""}
+          {nights > 0 ? `  ·  ${t("nights", { count: nights })}` : ""}
         </Text>
       </View>
     </View>
@@ -312,7 +312,14 @@ export default function TripFormScreen() {
     step?: string;
   }>();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation("tripForm");
   const { addTrip, updateTrip, deleteTrip, trips } = useTrips();
+
+  const STEPS = [
+    { title: t("stepTripTitle"), subtitle: t("stepTripSubtitle") },
+    { title: t("stepFlightsHotelsTitle"), subtitle: t("stepFlightsHotelsSubtitle") },
+    { title: t("stepReviewTitle"), subtitle: t("stepReviewSubtitle") },
+  ] as const;
 
   const isEdit = !!tripId;
   const existing = isEdit ? trips.find((t: any) => t.id === tripId) : null;
@@ -429,10 +436,13 @@ export default function TripFormScreen() {
     }
   })();
 
+  const dateLocale = i18n.language === "en" ? enUS : ptBR;
+  const dayMonthPattern = i18n.language === "en" ? "MMM d" : "d 'de' MMM";
+
   const fmtDate = (d: string) => {
     try {
-      return format(new Date(toIso(d) + "T00:00:00"), "d 'de' MMM", {
-        locale: ptBR,
+      return format(new Date(toIso(d) + "T00:00:00"), dayMonthPattern, {
+        locale: dateLocale,
       });
     } catch {
       return d;
@@ -441,7 +451,7 @@ export default function TripFormScreen() {
 
   const fmtIso = (iso: string) => {
     try {
-      return format(new Date(iso + "T00:00:00"), "d MMM", { locale: ptBR });
+      return format(new Date(iso + "T00:00:00"), "d MMM", { locale: dateLocale });
     } catch {
       return iso;
     }
@@ -487,18 +497,18 @@ export default function TripFormScreen() {
 
     if (n === 1) {
       if (!name.trim()) {
-        newErrors.name = "Dê um nome para a viagem";
+        newErrors.name = t("errorTripName");
       }
       if (!depart) {
-        newErrors.depart = "Informe a data de partida";
+        newErrors.depart = t("errorDeparture");
       }
     }
     if (n === 2) {
       if (!flights.some((f) => f.flightNumber.trim())) {
-        newErrors.flights = "Informe pelo menos um número de voo";
+        newErrors.flights = t("errorFlights");
       }
       if (!hotels.some((h) => h.name.trim())) {
-        newErrors.hotels = "Informe pelo menos um hotel";
+        newErrors.hotels = t("errorHotels");
       }
     }
 
@@ -553,10 +563,10 @@ export default function TripFormScreen() {
   };
 
   const handleDelete = () =>
-    Alert.alert("Excluir viagem", `Excluir "${existing?.name}"?`, [
-      { text: "Cancelar", style: "cancel" },
+    Alert.alert(t("deleteTripTitle"), t("deleteTripMessage", { name: existing?.name }), [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "Excluir",
+        text: t("delete"),
         style: "destructive",
         onPress: async () => {
           if (existing) {
@@ -619,14 +629,14 @@ export default function TripFormScreen() {
         >
           {step === 1 && (
             <>
-              <SectionLabel text="sobre a viagem" />
+              <SectionLabel text={t("aboutTrip")} />
               <View style={s.card}>
-                <Label text="nome da viagem" />
+                <Label text={t("tripName")} />
                 <TextInput
                   style={[s.input, errors.name && { borderColor: "#E74C3C" }]}
                   value={name}
                   onChangeText={setName}
-                  placeholder="ex: Japão setembro 2025"
+                  placeholder={t("tripNamePlaceholder")}
                   placeholderTextColor={dark.muted}
                 />
                 {errors.name && (
@@ -639,7 +649,7 @@ export default function TripFormScreen() {
 
                 <View style={{ height: spacing.md }} />
 
-                <Label text="destinos" hint="adicione um por vez" />
+                <Label text={t("destinations")} hint={t("destinationsHint")} />
                 {dests.length > 0 && (
                   <View style={s.chipsWrap}>
                     {dests.map((d, i) => (
@@ -658,7 +668,7 @@ export default function TripFormScreen() {
                     style={[s.input, { flex: 1, marginBottom: 0 }]}
                     value={destIn}
                     onChangeText={setDestIn}
-                    placeholder="ex: Tóquio"
+                    placeholder={t("destinationPlaceholder")}
                     placeholderTextColor={dark.muted}
                     onSubmitEditing={addDest}
                     returnKeyType="done"
@@ -669,26 +679,26 @@ export default function TripFormScreen() {
                 </View>
               </View>
 
-              <SectionLabel text="passaporte / origem" />
+              <SectionLabel text={t("passportOrigin")} />
               <View style={s.card}>
                 <Label
-                  text="país do seu passaporte"
-                  hint="usado para verificar necessidade de visto"
+                  text={t("passportCountry")}
+                  hint={t("passportCountryHint")}
                 />
                 <TextInput
                   style={s.input}
                   value={origin}
                   onChangeText={setOrigin}
-                  placeholder="ex: Brasil"
+                  placeholder={t("originPlaceholder")}
                   placeholderTextColor={dark.muted}
                 />
               </View>
 
-              <SectionLabel text="datas" />
+              <SectionLabel text={t("dates")} />
               <View style={s.card}>
                 <View style={s.dateRow}>
                   <View style={{ flex: 1 }}>
-                    <Label text="partida" />
+                    <Label text={t("departure")} />
                     <TextInput
                       style={[
                         s.input,
@@ -696,7 +706,7 @@ export default function TripFormScreen() {
                       ]}
                       value={depart}
                       onChangeText={(v) => setDepart(maskDate(v))}
-                      placeholder="DD-MM-AAAA"
+                      placeholder={t("datePlaceholder")}
                       placeholderTextColor={dark.muted}
                       keyboardType="number-pad"
                       maxLength={10}
@@ -711,12 +721,12 @@ export default function TripFormScreen() {
                   </View>
                   <View style={{ width: spacing.sm }} />
                   <View style={{ flex: 1 }}>
-                    <Label text="retorno" />
+                    <Label text={t("return")} />
                     <TextInput
                       style={s.input}
                       value={ret}
                       onChangeText={(v) => setRet(maskDate(v))}
-                      placeholder="DD-MM-AAAA"
+                      placeholder={t("datePlaceholder")}
                       placeholderTextColor={dark.muted}
                       keyboardType="number-pad"
                       maxLength={10}
@@ -729,7 +739,7 @@ export default function TripFormScreen() {
                       source={require("../assets/images/icon-moon.png")}
                       style={{ width: 16, height: 16 }}
                     />
-                    <Text style={s.nightsBadgeText}>{nights} noites</Text>
+                    <Text style={s.nightsBadgeText}>{t("nights", { count: nights })}</Text>
                   </View>
                 )}
               </View>
@@ -738,7 +748,7 @@ export default function TripFormScreen() {
                 step={1}
                 total={3}
                 onNext={next}
-                nextLabel="próximo"
+                nextLabel={t("next")}
                 nextIcon="arrow-forward"
               />
             </>
@@ -746,12 +756,12 @@ export default function TripFormScreen() {
 
           {step === 2 && (
             <>
-              <SectionLabel text="seus voos" />
+              <SectionLabel text={t("yourFlights")} />
 
               {flights.map((f, i) => (
                 <View key={i} style={s.card}>
                   <View style={s.entryHeader}>
-                    <Text style={s.entryTitle}>voo {i + 1}</Text>
+                    <Text style={s.entryTitle}>{t("flightEntryTitle", { index: i + 1 })}</Text>
                     {flights.length > 1 && (
                       <TouchableOpacity
                         onPress={() => removeFlight(i)}
@@ -767,7 +777,7 @@ export default function TripFormScreen() {
 
                   {dests.length > 1 && (
                     <>
-                      <Text style={s.hint}>destino deste voo</Text>
+                      <Text style={s.hint}>{t("flightDestination")}</Text>
                       <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -796,7 +806,7 @@ export default function TripFormScreen() {
                     </>
                   )}
 
-                  <Label text="número do voo" />
+                  <Label text={t("flightNumber")} />
                   <View style={s.iconInputWrap}>
                     <Image
                       source={require("../assets/images/icon-plane.png")}
@@ -805,26 +815,26 @@ export default function TripFormScreen() {
                     <TextInput
                       style={[s.input, s.inputIcon]}
                       value={f.flightNumber}
-                      onChangeText={(t) =>
-                        updateFlight(i, "flightNumber", t.toUpperCase())
+                      onChangeText={(txt) =>
+                        updateFlight(i, "flightNumber", txt.toUpperCase())
                       }
-                      placeholder="ex: JL047, G3 1234, LA8082"
+                      placeholder={t("flightNumberPlaceholder")}
                       placeholderTextColor={dark.muted}
                       autoCapitalize="characters"
                       autoCorrect={false}
                     />
                   </View>
-                  <TipBox text="Encontre no e-mail de confirmação ou no app da companhia." />
+                  <TipBox text={t("flightTip")} />
 
                   <Label
-                    text="data do voo (opcional)"
-                    hint="a partir dessa data, o destino já aparece automaticamente no itinerário"
+                    text={t("flightDateOptional")}
+                    hint={t("flightDateHint")}
                   />
                   <TextInput
                     style={s.input}
                     value={f.date ?? ""}
                     onChangeText={(v) => updateFlight(i, "date", maskDate(v))}
-                    placeholder="DD-MM-AAAA"
+                    placeholder={t("datePlaceholder")}
                     placeholderTextColor={dark.muted}
                     keyboardType="number-pad"
                     maxLength={10}
@@ -838,7 +848,7 @@ export default function TripFormScreen() {
                   size={16}
                   color={dark.blue}
                 />
-                <Text style={s.addEntryText}>adicionar voo</Text>
+                <Text style={s.addEntryText}>{t("addFlight")}</Text>
               </TouchableOpacity>
               {errors.flights && (
                 <Text style={{ fontSize: 12, color: "#E74C3C", marginTop: 6 }}>
@@ -846,12 +856,12 @@ export default function TripFormScreen() {
                 </Text>
               )}
 
-              <SectionLabel text="seus hotéis" />
+              <SectionLabel text={t("yourHotels")} />
 
               {hotels.map((h, i) => (
                 <View key={i} style={s.card}>
                   <View style={s.entryHeader}>
-                    <Text style={s.entryTitle}>hotel {i + 1}</Text>
+                    <Text style={s.entryTitle}>{t("hotelEntryTitle", { index: i + 1 })}</Text>
                     {hotels.length > 1 && (
                       <TouchableOpacity
                         onPress={() => removeHotel(i)}
@@ -867,7 +877,7 @@ export default function TripFormScreen() {
 
                   {dests.length > 1 && (
                     <>
-                      <Text style={s.hint}>destino deste hotel</Text>
+                      <Text style={s.hint}>{t("hotelDestination")}</Text>
                       <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -896,7 +906,7 @@ export default function TripFormScreen() {
                     </>
                   )}
 
-                  <Label text="nome do hotel" />
+                  <Label text={t("hotelName")} />
                   <View style={s.iconInputWrap}>
                     <Image
                       source={require("../assets/images/icon-building.png")}
@@ -905,8 +915,8 @@ export default function TripFormScreen() {
                     <TextInput
                       style={[s.input, s.inputIcon]}
                       value={h.name}
-                      onChangeText={(t) => updateHotel(i, "name", t)}
-                      placeholder="ex: Hotel Shinjuku Granbell"
+                      onChangeText={(txt) => updateHotel(i, "name", txt)}
+                      placeholder={t("hotelNamePlaceholder")}
                       placeholderTextColor={dark.muted}
                     />
                   </View>
@@ -914,7 +924,7 @@ export default function TripFormScreen() {
                   {tripDayList.length > 0 && (
                     <>
                       <View style={{ height: spacing.md }} />
-                      <Label text="check-in / check-out" hint="opcional" />
+                      <Label text={t("checkInOut")} hint={t("optional")} />
                       <TripDateRangePicker
                         days={tripDayList}
                         startKey={h.checkIn ?? null}
@@ -925,14 +935,14 @@ export default function TripFormScreen() {
                   )}
 
                   <View style={{ height: spacing.md }} />
-                  <Label text="código de confirmação" hint="opcional" />
+                  <Label text={t("confirmationCode")} hint={t("optional")} />
                   <TextInput
                     style={s.input}
                     value={h.conf}
-                    onChangeText={(t) =>
-                      updateHotel(i, "conf", t.toUpperCase())
+                    onChangeText={(txt) =>
+                      updateHotel(i, "conf", txt.toUpperCase())
                     }
-                    placeholder="ex: BK-39482910"
+                    placeholder={t("confirmationCodePlaceholder")}
                     placeholderTextColor={dark.muted}
                     autoCapitalize="characters"
                     autoCorrect={false}
@@ -946,7 +956,7 @@ export default function TripFormScreen() {
                   size={16}
                   color={dark.blue}
                 />
-                <Text style={s.addEntryText}>adicionar hotel</Text>
+                <Text style={s.addEntryText}>{t("addHotel")}</Text>
               </TouchableOpacity>
               {errors.hotels && (
                 <Text style={{ fontSize: 12, color: "#E74C3C", marginTop: 6 }}>
@@ -959,7 +969,7 @@ export default function TripFormScreen() {
                 total={3}
                 onBack={back}
                 onNext={next}
-                nextLabel="revisar"
+                nextLabel={t("reviewStep")}
                 nextIcon="arrow-forward"
               />
             </>
@@ -967,7 +977,7 @@ export default function TripFormScreen() {
 
           {step === 3 && (
             <>
-              <SectionLabel text="resumo da viagem" />
+              <SectionLabel text={t("tripSummary")} />
 
               <ReviewHero
                 name={name}
@@ -980,7 +990,7 @@ export default function TripFormScreen() {
 
               {dests.length > 0 && (
                 <>
-                  <SectionLabel text="destinos" />
+                  <SectionLabel text={t("destinations")} />
                   <View style={s.card}>
                     <View style={s.chipsWrap}>
                       {dests.map((d, i) => (
@@ -999,7 +1009,7 @@ export default function TripFormScreen() {
 
               {flights.filter((f) => f.flightNumber.trim()).length > 0 && (
                 <>
-                  <SectionLabel text="voos" />
+                  <SectionLabel text={t("flights")} />
                   <View style={s.card}>
                     {flights
                       .filter((f) => f.flightNumber.trim())
@@ -1016,7 +1026,7 @@ export default function TripFormScreen() {
                             style={{ width: 16, height: 16 }}
                           />
                           <Text style={s.reviewLabel}>
-                            {f.dest || `voo ${i + 1}`}
+                            {f.dest || t("flightEntryTitle", { index: i + 1 })}
                           </Text>
                           <Text style={[s.reviewValue, { color: dark.blue }]}>
                             {f.flightNumber}
@@ -1029,7 +1039,7 @@ export default function TripFormScreen() {
 
               {hotels.filter((h) => h.name.trim()).length > 0 && (
                 <>
-                  <SectionLabel text="hotéis" />
+                  <SectionLabel text={t("hotels")} />
                   <View style={s.card}>
                     {hotels
                       .filter((h) => h.name.trim())
@@ -1046,7 +1056,7 @@ export default function TripFormScreen() {
                             style={{ width: 16, height: 16 }}
                           />
                           <Text style={s.reviewLabel}>
-                            {h.dest || `hotel ${i + 1}`}
+                            {h.dest || t("hotelEntryTitle", { index: i + 1 })}
                           </Text>
                           <View style={{ alignItems: "flex-end" }}>
                             <Text style={s.reviewValue} numberOfLines={1}>
@@ -1071,23 +1081,18 @@ export default function TripFormScreen() {
                       source={require("../assets/images/icon-warning.png")}
                       style={{ width: 18, height: 18 }}
                     />
-                    <Text style={s.visaTitle}>
-                      atenção: visto pode ser necessário
-                    </Text>
+                    <Text style={s.visaTitle}>{t("visaWarningTitle")}</Text>
                   </View>
                   {getVisaWarnings(dests, origin).map((w, i) => (
                     <Text key={i} style={s.visaMsg}>
                       • {w.message}
                     </Text>
                   ))}
-                  <Text style={s.visaTip}>
-                    Itens &quot;solicitar visto&quot; serão adicionados ao
-                    checklist automaticamente.
-                  </Text>
+                  <Text style={s.visaTip}>{t("visaTip")}</Text>
                 </View>
               )}
 
-              <SectionLabel text="checklist gerado automaticamente" />
+              <SectionLabel text={t("generatedChecklist")} />
               <View style={s.card}>
                 {(() => {
                   const visaItems = getVisaWarnings(dests, origin);
@@ -1099,7 +1104,7 @@ export default function TripFormScreen() {
                     }),
                     ...visaItems.map((w) => ({
                       cat: "visa",
-                      text: `Solicitar visto — ${w.message.split(":")[0]}`,
+                      text: `${t("visaChecklistPrefix")}${w.message.split(":")[0]}`,
                     })),
                   ];
                   return allItems.map((item, i) => {
@@ -1130,7 +1135,7 @@ export default function TripFormScreen() {
                 total={3}
                 onBack={back}
                 onNext={next}
-                nextLabel={isEdit ? "salvar alterações" : "criar viagem"}
+                nextLabel={isEdit ? t("saveChanges") : t("createTrip")}
                 nextIcon="checkmark"
               />
             </>

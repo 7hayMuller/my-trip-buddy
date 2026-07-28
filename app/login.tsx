@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
@@ -21,6 +22,7 @@ import { dark, radius, spacing } from "../theme";
 export default function LoginScreen() {
   const nav = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation("login");
   const { loginWithEmail, verifyCode, loginWithGoogle, loading, isSignedIn } =
     useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -49,12 +51,12 @@ export default function LoginScreen() {
     setGoogleLoading(true);
     const result = await loginWithGoogle();
     setGoogleLoading(false);
-    if (result.error) Alert.alert("Erro", result.error);
+    if (result.error) Alert.alert(t("errorTitle"), result.error);
   };
 
   const handleLogin = async () => {
     if (!email.trim()) {
-      Alert.alert("Email obrigatório", "Digite seu email para continuar");
+      Alert.alert(t("emailRequiredTitle"), t("emailRequiredMessage"));
       return;
     }
 
@@ -62,11 +64,11 @@ export default function LoginScreen() {
     if (result.success) {
       setSent(true);
       Alert.alert(
-        "Link enviado!",
-        `Verifique seu email (${email}) e clique no link para acessar`,
+        t("linkSentTitle"),
+        t("linkSentMessage", { email }),
         [
           {
-            text: "OK",
+            text: t("ok"),
             onPress: () => {
               setEmail("");
               setSent(false);
@@ -75,13 +77,13 @@ export default function LoginScreen() {
         ],
       );
     } else {
-      Alert.alert("Erro", result.error || "Erro ao enviar link");
+      Alert.alert(t("errorTitle"), result.error || t("sendLinkError"));
     }
   };
 
   const handleVerifyCode = async () => {
     if (!code.trim()) {
-      Alert.alert("Código obrigatório", "Digite o código recebido no email");
+      Alert.alert(t("codeRequiredTitle"), t("codeRequiredMessage"));
       return;
     }
 
@@ -91,7 +93,7 @@ export default function LoginScreen() {
       setSent(false);
       setEmail("");
     } else {
-      Alert.alert("Erro", result.error || "Código inválido");
+      Alert.alert(t("errorTitle"), result.error || t("invalidCode"));
     }
   };
 
@@ -152,24 +154,24 @@ export default function LoginScreen() {
                         source={require("../assets/images/icon-gmail.png")}
                         style={{ width: 22, height: 22 }}
                       />
-                      <Text style={s.googleBtnText}>Continuar com Google</Text>
+                      <Text style={s.googleBtnText}>{t("continueWithGoogle")}</Text>
                     </>
                   )}
                 </TouchableOpacity>
 
                 <View style={s.orRow}>
                   <View style={s.orLine} />
-                  <Text style={s.orText}>ou</Text>
+                  <Text style={s.orText}>{t("or")}</Text>
                   <View style={s.orLine} />
                 </View>
               </>
             )}
 
             <View>
-              <Text style={s.inputLabel}>Email</Text>
+              <Text style={s.inputLabel}>{t("emailLabel")}</Text>
               <TextInput
                 style={s.input}
-                placeholder="seu@email.com"
+                placeholder={t("emailPlaceholder")}
                 value={email}
                 onChangeText={setEmail}
                 editable={!loading}
@@ -202,25 +204,21 @@ export default function LoginScreen() {
                       source={require("../assets/images/icon-mail.png")}
                       style={{ width: 24, height: 24 }}
                     />
-                    <Text style={s.buttonText}>Enviar link de acesso</Text>
+                    <Text style={s.buttonText}>{t("sendAccessLink")}</Text>
                   </>
                 )}
               </View>
             </TouchableOpacity>
 
-            <Text style={s.terms}>
-              Enviaremos um link seguro{"\n"}para seu email
-            </Text>
+            <Text style={s.terms}>{t("terms")}</Text>
           </>
         ) : (
           <>
-            <Text style={s.sentTitle}>Código enviado! ✅</Text>
-            <Text style={s.sentSubtitle}>
-              Verifique seu email e digite o código de 6 dígitos
-            </Text>
+            <Text style={s.sentTitle}>{t("codeSentTitle")}</Text>
+            <Text style={s.sentSubtitle}>{t("codeSentSubtitle")}</Text>
 
             <View>
-              <Text style={s.inputLabel}>Código</Text>
+              <Text style={s.inputLabel}>{t("codeLabel")}</Text>
               <TextInput
                 style={s.input}
                 placeholder="000000"
@@ -253,7 +251,7 @@ export default function LoginScreen() {
                 ) : (
                   <>
                     <Ionicons name="checkmark" size={20} color={dark.ink} />
-                    <Text style={s.buttonText}>Verificar código</Text>
+                    <Text style={s.buttonText}>{t("verifyCode")}</Text>
                   </>
                 )}
               </View>
@@ -266,7 +264,7 @@ export default function LoginScreen() {
                 setCode("");
               }}
             >
-              <Text style={s.changeEmail}>Usar outro email</Text>
+              <Text style={s.changeEmail}>{t("useAnotherEmail")}</Text>
             </TouchableOpacity>
           </>
         )}

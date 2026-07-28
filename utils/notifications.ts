@@ -1,13 +1,16 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import i18n from "../i18n";
 import { Trip } from "../types";
 
-// Cada número é um lembrete ativo: "avisar X dias antes da viagem". Antes
-// disso os marcos eram fixos (50/40/30/20/10/5/1) com toggle liga/desliga —
-// agora o usuário ajusta livremente cada lembrete numa barra, então a lista
-// em si já representa os lembretes ativos (sem entrada = sem aviso).
+// Cada número é um lembrete ativo: "avisar X dias antes da viagem". A lista
+// em si já representa os lembretes ativos (sem entrada = sem aviso) — mistura
+// marcos fixos (MILESTONES, com checkbox na UI) e no máximo um valor
+// personalizado digitado pela pessoa.
 export type NotificationSettings = number[];
+
+export const MILESTONES = [50, 40, 30, 20, 10, 5, 1] as const;
 
 const SETTINGS_KEY = "@wanderlust_notif_settings";
 // Prefixo usado no identifier de cada notificação agendada, pra conseguir
@@ -15,10 +18,6 @@ const SETTINGS_KEY = "@wanderlust_notif_settings";
 // venha a agendar por outro motivo no futuro).
 const NOTIF_PREFIX = "trip-countdown-";
 const CHANNEL_ID = "trip-countdown";
-
-export const MIN_REMINDER_DAYS = 1;
-export const MAX_REMINDER_DAYS = 90;
-export const DEFAULT_REMINDER_DAYS = 7;
 
 const DEFAULT_SETTINGS: NotificationSettings = [30, 7, 1];
 
@@ -57,14 +56,15 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 function messageFor(daysBefore: number, tripName: string): string {
-  if (daysBefore === 1) return `${tripName} é amanhã! 🎉 Prepare a mala!`;
-  return `Faltam ${daysBefore} dias para ${tripName}! ✈️`;
+  if (daysBefore === 1)
+    return i18n.t("notifRemindersPicker:notifTomorrow", { tripName });
+  return i18n.t("notifRemindersPicker:notifCountdown", { daysBefore, tripName });
 }
 
 async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS !== "android") return;
   await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-    name: "Contagem regressiva da viagem",
+    name: i18n.t("notifRemindersPicker:channelName"),
     importance: Notifications.AndroidImportance.DEFAULT,
   });
 }

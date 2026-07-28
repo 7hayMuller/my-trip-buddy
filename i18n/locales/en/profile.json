@@ -1,0 +1,12 @@
+{
+  "title": "my profile",
+  "defaultUserName": "User",
+  "settings": "Settings",
+  "notifications": "Notifications",
+  "notificationsHint": "countdown alerts for your next trip",
+  "privacy": "Privacy",
+  "helpSupport": "Help & Support",
+  "logout": "Log Out",
+  "notifPermissionRequiredTitle": "Permission required",
+  "notifPermissionRequiredMessage": "Enable notifications for this app in your phone settings to get countdown alerts."
+}

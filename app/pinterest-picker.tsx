@@ -11,6 +11,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ScrollView,
   StyleSheet,
@@ -63,12 +64,16 @@ const SKELETON_RATIOS = [1.3, 0.85, 1, 1.2, 0.9, 1.1];
 export default function LooksPickerScreen() {
   const nav = useRouter();
   const insets = useSafeAreaInsets();
-  const { country: countryParam } = useLocalSearchParams<{
+  const { country: countryParam, day: dayParam } = useLocalSearchParams<{
     country?: string;
+    day?: string;
   }>();
   const country = countryParam || OUTROS_COUNTRY;
   const { activeTrip, activeLooks, addLooks, removeLook } = useTrips();
   const isOnline = useNetworkStatus();
+  const { t } = useTranslation("pinterestPicker");
+  const { t: tCommon } = useTranslation("common");
+  const displayCountry = country === OUTROS_COUNTRY ? tCommon("other") : country;
 
   const dayList = useMemo(
     () => getTripDays(activeTrip?.depart ?? "", activeTrip?.ret ?? ""),
@@ -85,10 +90,15 @@ export default function LooksPickerScreen() {
 
   const [selectedDayKey, setSelectedDayKey] = useState<string | null>(null);
 
-  // Mesma prioridade do itinerário: prefere o bucket "sem data" quando ele
-  // tem conteúdo (looks salvos antes dessa feature), senão hoje/dia 1.
+  // Se veio de looks-days.tsx, respeita o dia escolhido lá. Senão, mesma
+  // prioridade do itinerário: prefere o bucket "sem data" quando ele tem
+  // conteúdo (looks salvos antes dessa feature), senão hoje/dia 1.
   useEffect(() => {
     if (!activeTrip) return;
+    if (dayParam) {
+      setSelectedDayKey(dayParam);
+      return;
+    }
     const todayKey = format(new Date(), "yyyy-MM-dd");
     const fallback = hasUnassigned
       ? UNASSIGNED_DAY_KEY
@@ -97,7 +107,7 @@ export default function LooksPickerScreen() {
         null);
     setSelectedDayKey(fallback);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTrip?.id, country]);
+  }, [activeTrip?.id, country, dayParam]);
 
   const looksForSelectedDay = countryLooks.filter((l: LookPin) =>
     selectedDayKey === UNASSIGNED_DAY_KEY ? !l.date : l.date === selectedDayKey,
@@ -135,7 +145,7 @@ export default function LooksPickerScreen() {
       setPhotos(results);
     } catch (e: any) {
       if (e?.message === "NO_KEY") setError("NO_KEY");
-      else setError(e?.message ?? "Erro na busca.");
+      else setError(e?.message ?? t("searchError"));
     } finally {
       setLoading(false);
     }
@@ -274,11 +284,11 @@ export default function LooksPickerScreen() {
           <Ionicons name="arrow-back" size={20} color={dark.white} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>{country}</Text>
+          <Text style={s.headerTitle}>{displayCountry}</Text>
           <Text style={s.headerSub}>
             {totalCount > 0
-              ? `${totalCount} look${totalCount !== 1 ? "s" : ""} selecionado${totalCount !== 1 ? "s" : ""}`
-              : "escolha looks para usar em cada dia da sua viagem"}
+              ? t("selectedCountSub", { count: totalCount })
+              : t("chooseLooksHint")}
           </Text>
         </View>
       </View>
@@ -300,7 +310,7 @@ export default function LooksPickerScreen() {
         {looksForSelectedDay.length > 0 && (
           <View>
             <Text style={s.sectionLabel}>
-              Salvos neste dia ({looksForSelectedDay.length})
+              {t("savedThisDay", { count: looksForSelectedDay.length })}
             </Text>
             <ScrollView
               horizontal
@@ -342,7 +352,7 @@ export default function LooksPickerScreen() {
               source={require("../assets/images/icon-gallery.png")}
               style={{ width: 24, height: 24 }}
             />
-            <Text style={s.chipText}>Galeria</Text>
+            <Text style={s.chipText}>{t("gallery")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={s.chip}
@@ -353,14 +363,14 @@ export default function LooksPickerScreen() {
               source={require("../assets/images/icon-pinterest.png")}
               style={{ width: 24, height: 24 }}
             />
-            <Text style={s.chipText}>Pinterest</Text>
+            <Text style={s.chipText}>{t("pinterest")}</Text>
           </TouchableOpacity>
         </View>
 
         {/* selected tray — feedback constante do que já foi escolhido */}
         {totalCount > 0 && (
           <View>
-            <Text style={s.sectionLabel}>Selecionados ({totalCount})</Text>
+            <Text style={s.sectionLabel}>{t("selectedSection", { count: totalCount })}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -418,14 +428,11 @@ export default function LooksPickerScreen() {
               size={16}
               color={dark.yellow}
             />
-            <Text style={s.offlineInfoText}>
-              Você está sem internet — busca de novas inspirações indisponível.
-              Os looks já salvos continuam aqui em cima.
-            </Text>
+            <Text style={s.offlineInfoText}>{t("offlineHint")}</Text>
           </View>
         ) : UNSPLASH_KEY ? (
           <>
-            <Text style={s.sectionLabel}>Inspirações para o destino</Text>
+            <Text style={s.sectionLabel}>{t("inspirationSection")}</Text>
             <View style={s.searchWrap}>
               <Ionicons name="search" size={16} color={dark.muted} />
               <TextInput
@@ -434,7 +441,7 @@ export default function LooksPickerScreen() {
                 onChangeText={handleQueryChange}
                 onSubmitEditing={() => doSearch(query)}
                 returnKeyType="search"
-                placeholder="Buscar inspiração de look..."
+                placeholder={t("searchPlaceholder")}
                 placeholderTextColor={dark.muted}
               />
               {query.length > 0 && (
@@ -455,9 +462,7 @@ export default function LooksPickerScreen() {
             )}
 
             {!loading && !error && photos.length === 0 && query.length > 0 && (
-              <Text style={s.emptyText}>
-                Nenhuma inspiração encontrada para &quot;{query}&quot;
-              </Text>
+              <Text style={s.emptyText}>{t("noResults", { query })}</Text>
             )}
 
             <View style={s.masonryRow}>
@@ -494,9 +499,10 @@ export default function LooksPickerScreen() {
               style={{ width: 18, height: 18 }}
             />
             <Text style={s.infoText}>
-              Adicione ao <Text style={{ fontWeight: "900" }}>.env</Text>:{"\n"}
-              EXPO_PUBLIC_UNSPLASH_ACCESS_KEY=sua_chave{"\n\n"}
-              para ver inspirações de looks aqui. Crie grátis em{" "}
+              {t("envInfoBefore")}
+              <Text style={{ fontWeight: "900" }}>.env</Text>:{"\n"}
+              EXPO_PUBLIC_UNSPLASH_ACCESS_KEY=sua_chave
+              {t("envInfoMiddle")}
               <Text style={{ fontWeight: "900" }}>unsplash.com/developers</Text>
             </Text>
           </View>
@@ -508,16 +514,14 @@ export default function LooksPickerScreen() {
       {/* save bar */}
       {totalCount > 0 && (
         <View style={[s.saveBar, { paddingBottom: insets.bottom + 8 }]}>
-          <Text style={s.saveCount}>
-            {totalCount} look{totalCount !== 1 ? "s" : ""} prontos para salvar
-          </Text>
+          <Text style={s.saveCount}>{t("saveCountLabel", { count: totalCount })}</Text>
           <TouchableOpacity
             style={[s.saveBtn, saving && { opacity: 0.6 }]}
             onPress={saveLooks}
             disabled={saving}
             activeOpacity={0.85}
           >
-            <Text style={s.saveBtnText}>Salvar</Text>
+            <Text style={s.saveBtnText}>{t("save")}</Text>
             <Ionicons name="checkmark" size={16} color={dark.ink} />
           </TouchableOpacity>
         </View>

@@ -3,8 +3,10 @@ import { ResizeMode, Video } from "expo-av";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Animated,
+  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,6 +16,7 @@ import { dark, spacing } from "../theme";
 
 export function EmptyStateTrips() {
   const nav = useRouter();
+  const { t } = useTranslation("emptyStateTrips");
   const floatAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const feature1Anim = useRef(new Animated.Value(0)).current;
@@ -98,13 +101,9 @@ export function EmptyStateTrips() {
       />
       <View style={s.background}>
         <View style={s.content}>
-          <Text style={s.heading}>
-            Toda grande viagem começa com essa vista
-          </Text>
+          <Text style={s.heading}>{t("heading")}</Text>
 
-          <Text style={s.subheading}>
-            Organize cada detalhe e prepare-se para decolar.
-          </Text>
+          <Text style={s.subheading}>{t("subheading")}</Text>
 
           <View style={s.featuresList}>
             <Animated.View
@@ -113,27 +112,31 @@ export function EmptyStateTrips() {
               <View style={[s.featureBadge, { backgroundColor: dark.green }]}>
                 <Ionicons name="checkmark" size={16} color={dark.ink} />
               </View>
-              <Text style={s.featureText}>Crie um checklist personalizado</Text>
+              <Text style={s.featureText}>{t("feature1")}</Text>
             </Animated.View>
 
             <Animated.View
               style={[s.featureItem, createFeatureAnimStyle(feature2Anim)]}
             >
               <View style={[s.featureBadge, { backgroundColor: dark.pink }]}>
-                <Ionicons name="image" size={16} color={dark.ink} />
+                <Image
+                  source={require("../assets/images/icon-gallery.png")}
+                  style={{ width: 18, height: 18 }}
+                />
               </View>
-              <Text style={s.featureText}>
-                Escolha seus looks para a viagem
-              </Text>
+              <Text style={s.featureText}>{t("feature2")}</Text>
             </Animated.View>
 
             <Animated.View
               style={[s.featureItem, createFeatureAnimStyle(feature3Anim)]}
             >
               <View style={[s.featureBadge, { backgroundColor: dark.blue }]}>
-                <Ionicons name="map" size={16} color={dark.ink} />
+                <Image
+                  source={require("../assets/images/icon-country.png")}
+                  style={{ width: 18, height: 18 }}
+                />
               </View>
-              <Text style={s.featureText}>Separe os pontos de visitação</Text>
+              <Text style={s.featureText}>{t("feature3")}</Text>
             </Animated.View>
           </View>
 
@@ -142,7 +145,7 @@ export function EmptyStateTrips() {
             onPress={() => nav.push("/trip-form")}
             style={[s.buttonWrapper, s.button, { backgroundColor: dark.pink }]}
           >
-            <Text style={s.buttonText}>Organizar minha viagem agora</Text>
+            <Text style={s.buttonText}>{t("cta")}</Text>
             <Ionicons name="arrow-forward" size={18} color={dark.ink} />
           </TouchableOpacity>
         </View>

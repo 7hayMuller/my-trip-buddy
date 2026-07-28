@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
+import { useTranslation } from "react-i18next";
 import {
   ScrollView,
   StyleProp,
@@ -34,6 +35,7 @@ export function DateCarousel({
   // (ex: looks), usar absolute={false} pra ocupar espaço normal no layout.
   absolute?: boolean;
 }) {
+  const { t } = useTranslation("dateCarousel");
   const selectedDay = days.find((d) => d.key === selectedKey);
   const monthLabel = selectedDay?.monthLabel ?? days[0]?.monthLabel;
 
@@ -104,7 +106,7 @@ export function DateCarousel({
                 selectedKey === UNASSIGNED_DAY_KEY && s.unassignedLabelActive,
               ]}
             >
-              sem data
+              {t("unassigned")}
             </Text>
           </TouchableOpacity>
         )}

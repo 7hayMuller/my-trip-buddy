@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   FlatList,
   Modal,
@@ -19,6 +20,7 @@ export function CurrencySelect({
   value: string;
   onChange: (code: string) => void;
 }) {
+  const { t } = useTranslation("currencySelect");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [currencies, setCurrencies] = useState<CurrencyInfo[]>(
@@ -58,12 +60,12 @@ export function CurrencySelect({
           onPress={() => setOpen(false)}
         >
           <TouchableOpacity style={s.sheet} activeOpacity={1} onPress={() => {}}>
-            <Text style={s.title}>moeda</Text>
+            <Text style={s.title}>{t("title")}</Text>
             <TextInput
               style={s.search}
               value={query}
               onChangeText={setQuery}
-              placeholder="buscar moeda ou código..."
+              placeholder={t("searchPlaceholder")}
               placeholderTextColor={dark.muted}
               autoFocus
             />
@@ -92,7 +94,7 @@ export function CurrencySelect({
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
-                <Text style={s.empty}>Nenhuma moeda encontrada.</Text>
+                <Text style={s.empty}>{t("empty")}</Text>
               }
             />
           </TouchableOpacity>

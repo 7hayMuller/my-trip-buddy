@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Image,
@@ -27,14 +28,14 @@ import {
 } from "../utils/currency";
 import { getTripDays, TripDay } from "../utils/dates";
 
-const CATEGORY_META: Record<ExpenseCategory, { label: string; color: string }> =
+const CATEGORY_META: Record<ExpenseCategory, { labelKey: string; color: string }> =
   {
-    transporte: { label: "transporte", color: dark.blue },
-    hospedagem: { label: "hospedagem", color: dark.yellow },
-    alimentacao: { label: "alimentação", color: dark.green },
-    passeios: { label: "passeios", color: dark.pink },
-    compras: { label: "compras", color: colors.purple },
-    outros: { label: "outros", color: dark.mutedStrong },
+    transporte: { labelKey: "categoryTransport", color: dark.blue },
+    hospedagem: { labelKey: "categoryAccommodation", color: dark.yellow },
+    alimentacao: { labelKey: "categoryFood", color: dark.green },
+    passeios: { labelKey: "categoryActivities", color: dark.pink },
+    compras: { labelKey: "categoryShopping", color: colors.purple },
+    outros: { labelKey: "categoryOther", color: dark.mutedStrong },
   };
 
 // "outros" não tem ícone customizado — cai no fallback Ionicons.
@@ -77,6 +78,7 @@ export default function BudgetScreen() {
   const nav = useRouter();
   const insets = useSafeAreaInsets();
   const { activeTrip, updateTrip } = useTrips();
+  const { t } = useTranslation("budget");
 
   const budgetCurrency = activeTrip?.budgetCurrency ?? "BRL";
   const expenses: ExpenseEntry[] = activeTrip?.expenses ?? [];
@@ -109,8 +111,11 @@ export default function BudgetScreen() {
           <Ionicons name="arrow-back" size={16} color={dark.white} />
         </TouchableOpacity>
         <View style={s.empty}>
-          <Ionicons name="wallet-outline" size={32} color={dark.muted} />
-          <Text style={s.emptyText}>Nenhuma viagem ativa ainda.</Text>
+          <Image
+            source={require("../assets/images/icon-coins.png")}
+            style={{ width: 40, height: 40 }}
+          />
+          <Text style={s.emptyText}>{t("noActiveTrip")}</Text>
         </View>
       </View>
     );
@@ -169,7 +174,7 @@ export default function BudgetScreen() {
   const handleAddExpense = async () => {
     const amount = amountValue;
     if (amount <= 0) {
-      Alert.alert("Valor inválido", "Informe um valor maior que zero.");
+      Alert.alert(t("invalidAmountTitle"), t("invalidAmountMessage"));
       return;
     }
     setSaving(true);
@@ -197,10 +202,7 @@ export default function BudgetScreen() {
       setShowAdd(false);
     } catch (err) {
       console.error("Erro ao salvar despesa:", err);
-      Alert.alert(
-        "Não foi possível salvar",
-        "Tente novamente em alguns instantes.",
-      );
+      Alert.alert(t("saveErrorTitle"), t("tryAgain"));
     } finally {
       setSaving(false);
     }
@@ -229,7 +231,7 @@ export default function BudgetScreen() {
           <Ionicons name="arrow-back" size={18} color={dark.white} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={s.headerTitle}>orçamento</Text>
+          <Text style={s.headerTitle}>{t("title")}</Text>
           <Text style={s.headerEyebrow} numberOfLines={1}>
             {activeTrip.name}
           </Text>
@@ -241,7 +243,7 @@ export default function BudgetScreen() {
         contentContainerStyle={s.sheetContent}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={s.secLabel}>orçamento total</Text>
+        <Text style={s.secLabel}>{t("totalBudget")}</Text>
         <View style={s.card}>
           <View style={s.budgetRow}>
             <View style={s.budgetInputWrap}>
@@ -251,7 +253,7 @@ export default function BudgetScreen() {
                 value={budgetDigits ? formatAmount(budgetValue) : ""}
                 onChangeText={handleBudgetChange}
                 onBlur={handleSaveBudget}
-                placeholder="0,00"
+                placeholder={t("zeroPlaceholder")}
                 placeholderTextColor={dark.muted}
                 keyboardType="number-pad"
               />
@@ -277,29 +279,28 @@ export default function BudgetScreen() {
               </View>
               <View style={s.progressLabels}>
                 <Text style={s.progressSpent}>
-                  {formatMoney(totalSpent, budgetCurrency)} gastos
+                  {t("spentAmount", { amount: formatMoney(totalSpent, budgetCurrency) })}
                 </Text>
                 <Text
                   style={[s.progressRemaining, over && { color: dark.pink }]}
                 >
                   {over
-                    ? `${formatMoney(-remaining, budgetCurrency)} acima do orçamento`
-                    : `${formatMoney(remaining, budgetCurrency)} restante`}
+                    ? t("overBudgetAmount", { amount: formatMoney(-remaining, budgetCurrency) })
+                    : t("remainingAmount", { amount: formatMoney(remaining, budgetCurrency) })}
                 </Text>
               </View>
             </>
           )}
           {unconverted && (
             <Text style={s.warnText}>
-              algumas despesas em outra moeda não puderam ser convertidas e não
-              entram nesse total
+              {t("unconvertedWarning")}
             </Text>
           )}
         </View>
 
         {categoryTotals.length > 0 && (
           <>
-            <Text style={s.secLabel}>por categoria</Text>
+            <Text style={s.secLabel}>{t("byCategory")}</Text>
             <View style={s.card}>
               {categoryTotals.map(({ cat, total }, i) => {
                 const meta = CATEGORY_META[cat];
@@ -317,7 +318,7 @@ export default function BudgetScreen() {
                         size={16}
                         color={meta.color}
                       />
-                      <Text style={s.catRowLabel}>{meta.label}</Text>
+                      <Text style={s.catRowLabel}>{t(meta.labelKey)}</Text>
                       <Text style={s.catRowValue}>
                         {formatMoney(total, budgetCurrency)}
                       </Text>
@@ -340,11 +341,11 @@ export default function BudgetScreen() {
           </>
         )}
 
-        <Text style={s.secLabel}>despesas</Text>
+        <Text style={s.secLabel}>{t("expenses")}</Text>
         {sortedExpenses.length === 0 ? (
           <View style={s.card}>
             <Text style={s.emptyExpensesText}>
-              Nenhuma despesa registrada ainda.
+              {t("noExpenses")}
             </Text>
           </View>
         ) : (
@@ -371,10 +372,10 @@ export default function BudgetScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={s.expenseNote} numberOfLines={1}>
-                      {e.note || meta.label}
+                      {e.note || t(meta.labelKey)}
                     </Text>
                     <Text style={s.expenseMeta}>
-                      {[meta.label, dayLabel].filter(Boolean).join(" · ")}
+                      {[t(meta.labelKey), dayLabel].filter(Boolean).join(" · ")}
                     </Text>
                   </View>
                   <View style={{ alignItems: "flex-end" }}>
@@ -385,7 +386,7 @@ export default function BudgetScreen() {
                       <Text style={s.expenseConverted}>
                         {e.convertedAmount != null
                           ? `≈ ${formatMoney(e.convertedAmount, budgetCurrency)}`
-                          : "não convertido"}
+                          : t("notConverted")}
                       </Text>
                     )}
                   </View>
@@ -429,9 +430,9 @@ export default function BudgetScreen() {
             activeOpacity={1}
             onPress={() => {}}
           >
-            <Text style={s.modalTitle}>nova despesa</Text>
+            <Text style={s.modalTitle}>{t("newExpense")}</Text>
 
-            <Text style={s.label}>valor</Text>
+            <Text style={s.label}>{t("amount")}</Text>
             <View style={s.budgetRow}>
               <View style={s.budgetInputWrap}>
                 <Text style={s.budgetPrefix}>{getCurrencySymbol(expCurrency)}</Text>
@@ -439,7 +440,7 @@ export default function BudgetScreen() {
                   style={s.budgetInputField}
                   value={amountDigits ? formatAmount(amountValue) : ""}
                   onChangeText={handleAmountChange}
-                  placeholder="0,00"
+                  placeholder={t("zeroPlaceholder")}
                   placeholderTextColor={dark.muted}
                   keyboardType="number-pad"
                   autoFocus
@@ -448,7 +449,7 @@ export default function BudgetScreen() {
               <CurrencySelect value={expCurrency} onChange={setExpCurrency} />
             </View>
 
-            <Text style={s.label}>categoria</Text>
+            <Text style={s.label}>{t("category")}</Text>
             <View style={s.chipsWrap}>
               {CATEGORY_ORDER.map((cat) => {
                 const meta = CATEGORY_META[cat];
@@ -470,7 +471,7 @@ export default function BudgetScreen() {
                     <Text
                       style={[s.catChipText, active && { color: dark.ink }]}
                     >
-                      {meta.label}
+                      {t(meta.labelKey)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -479,7 +480,7 @@ export default function BudgetScreen() {
 
             {dayList.length > 0 && (
               <>
-                <Text style={s.label}>dia (opcional)</Text>
+                <Text style={s.label}>{t("dayOptional")}</Text>
                 <TripDatePicker
                   days={dayList}
                   selectedKey={dayKey}
@@ -488,12 +489,12 @@ export default function BudgetScreen() {
               </>
             )}
 
-            <Text style={s.label}>nota (opcional)</Text>
+            <Text style={s.label}>{t("noteOptional")}</Text>
             <TextInput
               style={s.input}
               value={note}
               onChangeText={setNote}
-              placeholder="ex: jantar no dia da chegada"
+              placeholder={t("notePlaceholder")}
               placeholderTextColor={dark.muted}
             />
 
@@ -504,7 +505,7 @@ export default function BudgetScreen() {
               activeOpacity={0.85}
             >
               <Text style={s.saveBtnText}>
-                {saving ? "salvando..." : "salvar despesa"}
+                {saving ? t("saving") : t("saveExpense")}
               </Text>
             </TouchableOpacity>
           </TouchableOpacity>

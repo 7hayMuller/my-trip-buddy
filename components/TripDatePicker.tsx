@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Image,
   Modal,
@@ -19,18 +20,19 @@ export function TripDatePicker({
   days,
   selectedKey,
   onSelect,
-  placeholder = "selecionar dia",
+  placeholder,
 }: {
   days: TripDay[];
   selectedKey: string | null;
   onSelect: (key: string | null) => void;
   placeholder?: string;
 }) {
+  const { t } = useTranslation("tripDatePicker");
   const [open, setOpen] = useState(false);
   const selectedDay = days.find((d) => d.key === selectedKey);
   const label = selectedDay
-    ? `${selectedDay.dayLabel} de ${selectedDay.monthLabel}`
-    : placeholder;
+    ? t("dateFormat", { day: selectedDay.dayLabel, month: selectedDay.monthLabel })
+    : (placeholder ?? t("selectDay"));
 
   return (
     <>
@@ -68,10 +70,10 @@ export function TripDatePicker({
         >
           <TouchableOpacity style={s.sheet} activeOpacity={1} onPress={() => {}}>
             <View style={s.sheetHeader}>
-              <Text style={s.title}>dia da viagem</Text>
+              <Text style={s.title}>{t("title")}</Text>
               {selectedDay && (
                 <TouchableOpacity onPress={() => onSelect(null)}>
-                  <Text style={s.clearText}>limpar</Text>
+                  <Text style={s.clearText}>{t("clear")}</Text>
                 </TouchableOpacity>
               )}
             </View>
