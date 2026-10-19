@@ -1,144 +1,144 @@
 # ✈️ My Trip Buddy
 
-App para organizar viagens já reservadas, pensado para quem fica ansioso antes de viajar. Reúne em um só lugar as informações da viagem:
+An app for organizing trips you've already booked, designed for travelers who get anxious before a trip. It brings the trip's information together in one place:
 
-- voos, hotéis, roteiro por dia, checklist, orçamento e looks
-- uma contagem regressiva para a partida
-- avisos de visto
+- flights, hotels, a day-by-day itinerary, checklist, budget and outfits
+- a countdown to departure
+- visa alerts
 
-Feito com React Native, Expo e TypeScript, com sincronização no Supabase.
+Built with React Native, Expo and TypeScript, with Supabase sync.
 
 ---
 
-## Funcionalidades
+## Features
 
 ### Login
-- Entrar com **Google** ou por **e-mail**, com link de acesso ou código de 6 dígitos (Supabase Auth).
+- Sign in with **Google** or by **email**, with a magic link or a 6-digit code (Supabase Auth).
 
-### Criar e editar viagem
-Formulário em 3 etapas:
+### Create and edit a trip
+3-step form:
 
-1. **Sobre a viagem:** nome, destinos (um por vez), país do passaporte e datas de partida e retorno, com o total de noites calculado.
-2. **Voos e hotéis:**
-   - Voos por destino: número do voo e data. A partir da data do voo, o destino entra sozinho no itinerário.
-   - Hotéis por destino: nome, período de check-in e check-out e código de confirmação.
-3. **Revisão:** resumo da viagem, avisos de visto e prévia do checklist gerado.
+1. **About the trip:** name, destinations (one at a time), passport country and departure and return dates, with the number of nights calculated automatically.
+2. **Flights and hotels:**
+   - Flights per destination: flight number and date. From the flight date on, the destination shows up in the itinerary automatically.
+   - Hotels per destination: name, check-in/check-out dates and confirmation code.
+3. **Review:** trip summary, visa alerts and a preview of the generated checklist.
 
-Viagens podem ser editadas ou excluídas depois.
+Trips can be edited or deleted later.
 
 ### Home
-- **Contagem regressiva** até a partida, em dias, horas, minutos e segundos.
-- **Capa da viagem** com foto da galeria, que pode ser trocada.
-- **Mapa-múndi** com pins nos destinos, além do total de destinos e noites.
-- **Aviso de visto** com base no passaporte e nos destinos (ex.: EUA, Canadá, Índia, Turquia, Vietnã).
-- **Checklist** gerado automaticamente por categoria (docs, voo, hotel, looks, visto e outros). Ele se adapta à viagem:
-  - "Reservar hotel" se ainda não há hospedagem
-  - câmbio em espécie para destinos onde se usa muito dinheiro vivo
-  - vacinas para destinos que pedem
-  - pedido de visto quando necessário
+- **Countdown** to departure in days, hours, minutes and seconds.
+- **Trip cover** with a photo from the gallery, which can be changed.
+- **World map** with pins on the destinations, plus the total number of destinations and nights.
+- **Visa alert** based on the passport and destinations (e.g. USA, Canada, India, Turkey, Vietnam).
+- **Checklist** generated automatically by category (docs, flight, hotel, outfits, visa and other). It adapts to the trip:
+  - "Book hotel" if there's no accommodation yet
+  - local cash for destinations where cash is widely used
+  - vaccines for destinations that require them
+  - a visa application when needed
 
-  Também é possível adicionar itens próprios e marcar os concluídos.
-- **Hospedagens** com foto do local (Google Street View), endereço, datas, noites, código de confirmação e link para o Google Maps.
-- **Confirmações** de voos e hotéis.
-- Atalho para o **orçamento**.
+  You can also add your own items and check off completed ones.
+- **Accommodations** with a photo of the place (Google Street View), address, dates, nights, confirmation code and a Google Maps link.
+- **Confirmations** for flights and hotels.
+- Shortcut to the **budget**.
 
-### Viagens
-- Lista de todas as viagens, com tela vazia ilustrada para criar a primeira.
+### Trips
+- List of all trips, with an illustrated empty state to create the first one.
 
-### Itinerário
-- **Carrossel de dias** da viagem, incluindo uma aba "sem data".
-- **Mapa interativo** (Leaflet + OpenStreetMap) com os destinos do dia, cada país com uma cor.
-- **Busca de lugares** (Photon / OpenStreetMap) para adicionar pontos de visitação a cada dia.
-- Toque em um destino para abrir a rota no **Google Maps** a partir da sua localização, ou abra a **rota do dia** inteira.
-- **Modo offline:** sem internet, mostra a lista do dia, sem mapa e sem busca.
+### Itinerary
+- **Day carousel** for the trip, including an "unscheduled" tab.
+- **Interactive map** (Leaflet + OpenStreetMap) with the day's destinations, each country in its own color.
+- **Place search** (Photon / OpenStreetMap) to add sights to each day.
+- Tap a destination to open the route in **Google Maps** from your current location, or open the route for the whole day.
+- **Offline mode:** without internet, shows the day's list without the map or search.
 
-### Looks
-- **Pastas por país** da viagem, com os looks organizados por dia.
-- Adicionar looks da **galeria** do celular.
-- **Inspirações para o destino** via Unsplash, com busca e seleção de vários looks de uma vez.
-- Atalho para buscar looks no **Pinterest** com termos do destino.
-- Visualizador de looks em tela cheia.
+### Outfits
+- **Folders per country** in the trip, with outfits organized by day.
+- Add outfits from the phone's **gallery**.
+- **Destination inspiration** from Unsplash, with search and multi-select.
+- Shortcut to search outfits on **Pinterest** using the destination as the search term.
+- Full-screen outfit viewer.
 
-### Orçamento
-- Orçamento total na moeda escolhida, com valor gasto, restante e quanto passou do limite.
-- **Despesas** com valor, moeda, categoria (transporte, hospedagem, alimentação, passeios, compras e outros), dia e nota.
-- **Conversão automática de moeda** pela API Frankfurter. O app avisa quando alguma despesa não pôde ser convertida.
-- Gastos agrupados por categoria.
+### Budget
+- Total budget in the chosen currency, showing amount spent, amount remaining and how much over budget.
+- **Expenses** with amount, currency, category (transport, accommodation, food, activities, shopping and other), day and note.
+- **Automatic currency conversion** via the Frankfurter API. The app warns when an expense couldn't be converted.
+- Spending grouped by category.
 
-### Perfil e notificações
-- **Lembretes de contagem regressiva:** escolha de quantos dias antes avisar (50, 40, 30, 20, 10, 5 ou 1) ou um valor personalizado.
-- Sair da conta.
+### Profile and notifications
+- **Countdown reminders:** choose how many days in advance to be notified (50, 40, 30, 20, 10, 5 or 1) or a custom value.
+- Sign out.
 
-### Geral
-- **Idiomas:** português e inglês.
-- **Sincronização na nuvem:** viagens, checklist, looks e lugares ficam salvos no aparelho (AsyncStorage) e são sincronizados com o Supabase. As imagens vão para o Supabase Storage.
-- **Cache** de dados de hotéis e voos para reduzir chamadas às APIs.
+### General
+- **Languages:** Portuguese and English.
+- **Cloud sync:** trips, checklist, outfits and places are stored on the device (AsyncStorage) and synced to Supabase. Images go to Supabase Storage.
+- **Caching** of hotel and flight data to reduce API calls.
 
 ---
 
-## Stack
+## Tech stack
 
-| Área | Tecnologias |
+| Area | Technologies |
 | --- | --- |
-| Base | Expo 54, React Native 0.81, React 19, TypeScript, Expo Router |
-| Dados e auth | Supabase (Postgres, Auth, Storage), AsyncStorage, Google Sign-In |
-| Mapas | Leaflet + OpenStreetMap (WebView), d3-geo + world-atlas (mapa-múndi), Photon (geocoding) |
-| APIs | Google Street View, Unsplash, Frankfurter (câmbio), AirLabs (voos) |
+| Core | Expo 54, React Native 0.81, React 19, TypeScript, Expo Router |
+| Data and auth | Supabase (Postgres, Auth, Storage), AsyncStorage, Google Sign-In |
+| Maps | Leaflet + OpenStreetMap (WebView), d3-geo + world-atlas (world map), Photon (geocoding) |
+| APIs | Google Street View, Unsplash, Frankfurter (exchange rates), AirLabs (flights) |
 | UI | Reanimated, Gesture Handler, Bottom Sheet, Linear Gradient, SVG, Haptics |
-| Outros | expo-notifications, NetInfo, i18next, date-fns |
+| Other | expo-notifications, NetInfo, i18next, date-fns |
 
 ---
 
-## Estrutura
+## Project structure
 
 ```
 app/
-  (tabs)/            Home, Viagens, Itinerário, Looks, Perfil
-  trip-form.tsx      Criar/editar viagem
-  budget.tsx         Orçamento
-  pinterest-picker.tsx  Seleção de looks (galeria, Unsplash, Pinterest)
+  (tabs)/            Home, Trips, Itinerary, Outfits, Profile
+  trip-form.tsx      Create/edit trip
+  budget.tsx         Budget
+  pinterest-picker.tsx  Outfit picker (gallery, Unsplash, Pinterest)
   looks-days.tsx, look-viewer.tsx
   login.tsx
-components/          Mapas, calendários, cards, seletores
-hooks/               useTrips (estado e sincronização), useAuth, useCountdown, useNetworkStatus
-utils/               Integrações (supabase, currency, geocode, hotelDataService,
+components/          Maps, calendars, cards, pickers
+hooks/               useTrips (state and sync), useAuth, useCountdown, useNetworkStatus
+utils/               Integrations (supabase, currency, geocode, hotelDataService,
                      flightService, unsplash, pinterest, visa, notifications)
-i18n/locales/        pt e en
+i18n/locales/        pt and en
 supabase_migration.sql, supabase_storage_migration.sql
 ```
 
 ---
 
-## Como rodar
+## Getting started
 
-### Pré-requisitos
+### Prerequisites
 - Node.js 20+
-- Android Studio ou Xcode. O app usa módulos nativos (Google Sign-In), então precisa de um development build. Não roda no Expo Go.
-- Projeto no Supabase
+- Android Studio or Xcode. The app uses native modules (Google Sign-In), so it needs a development build. It doesn't run in Expo Go.
+- A Supabase project
 
 ### Supabase
-No SQL Editor, rode:
-1. `supabase_migration.sql`, que cria a tabela `app_data`
-2. `supabase_storage_migration.sql`, que cria o bucket `trip-images`
+In the SQL Editor, run:
+1. `supabase_migration.sql`, which creates the `app_data` table
+2. `supabase_storage_migration.sql`, which creates the `trip-images` bucket
 
-### Variáveis de ambiente
-Crie um `.env` na raiz:
+### Environment variables
+Create a `.env` file in the project root:
 
 ```
 EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
 EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=
-EXPO_PUBLIC_GOOGLE_MAPS_KEY=          # Street View das hospedagens
-EXPO_PUBLIC_UNSPLASH_ACCESS_KEY=      # inspirações de looks
+EXPO_PUBLIC_GOOGLE_MAPS_KEY=          # Street View for accommodations
+EXPO_PUBLIC_UNSPLASH_ACCESS_KEY=      # outfit inspiration
 ```
 
-Sem o Supabase configurado, o app funciona só com o armazenamento local.
+Without Supabase configured, the app works with local storage only.
 
-### Executar
+### Run
 
 ```bash
 npm install
-npm run android    # ou: npm run ios
+npm run android    # or: npm run ios
 ```
 
-Builds com EAS: perfis `development`, `preview` (APK) e `production` em `eas.json`.
+EAS builds: `development`, `preview` (APK) and `production` profiles in `eas.json`.
