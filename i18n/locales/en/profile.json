@@ -8,5 +8,11 @@
   "helpSupport": "Help & Support",
   "logout": "Log Out",
   "notifPermissionRequiredTitle": "Permission required",
-  "notifPermissionRequiredMessage": "Enable notifications for this app in your phone settings to get countdown alerts."
+  "notifPermissionRequiredMessage": "Enable notifications for this app in your phone settings to get countdown alerts.",
+  "deleteAccount": "Delete account",
+  "deleteAccountConfirmTitle": "Delete account?",
+  "deleteAccountConfirmMessage": "All your trips, checklists, looks and photos will be permanently deleted. This cannot be undone.",
+  "cancel": "Cancel",
+  "confirmDelete": "Delete",
+  "deleteAccountErrorTitle": "Could not delete account"
 }

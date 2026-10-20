@@ -8,5 +8,11 @@
   "helpSupport": "Ajuda & Suporte",
   "logout": "Sair da Conta",
   "notifPermissionRequiredTitle": "Permissão necessária",
-  "notifPermissionRequiredMessage": "Ative as notificações para este app nas configurações do celular pra receber os avisos de contagem regressiva."
+  "notifPermissionRequiredMessage": "Ative as notificações para este app nas configurações do celular pra receber os avisos de contagem regressiva.",
+  "deleteAccount": "Excluir conta",
+  "deleteAccountConfirmTitle": "Excluir conta?",
+  "deleteAccountConfirmMessage": "Todas as suas viagens, checklists, looks e fotos serão apagados permanentemente. Essa ação não pode ser desfeita.",
+  "cancel": "Cancelar",
+  "confirmDelete": "Excluir",
+  "deleteAccountErrorTitle": "Não foi possível excluir a conta"
 }

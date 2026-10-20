@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { AppState, Platform } from 'react-native';
 
 const URL  = process.env.EXPO_PUBLIC_SUPABASE_URL  ?? '';
 const KEY  = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
-const DEVICE_KEY = '@wanderlust_device_id';
 
 // Durante o build estático do web (Expo `output: "static"`), este módulo é
 // avaliado em Node puro, que não tem `WebSocket` global. O Supabase cria o
@@ -19,9 +19,13 @@ class NoopWebSocket {
 export const supabase = URL && KEY
   ? createClient(URL, KEY, {
       auth: {
+        // Sem um storage explícito, no celular a sessão fica só em memória e o
+        // usuário precisa logar de novo a cada abertura do app. No build
+        // estático do web (Node, sem `window`) não há onde persistir.
+        storage: typeof window !== 'undefined' ? AsyncStorage : undefined,
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true,
+        detectSessionInUrl: Platform.OS === 'web',
       },
       realtime: typeof WebSocket === 'undefined'
         ? { transport: NoopWebSocket as any }
@@ -31,29 +35,24 @@ export const supabase = URL && KEY
 
 export const isConfigured = !!supabase;
 
-/* ── device ID (chave única por instalação) ──────────────────────── */
+// No celular, só renova o token com o app em primeiro plano — recomendação do
+// Supabase para React Native, evita refresh falhando com o app em background.
+if (supabase && Platform.OS !== 'web') {
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') supabase.auth.startAutoRefresh();
+    else supabase.auth.stopAutoRefresh();
+  });
+}
 
-let deviceIdCache: string | null = null;
+/* ── usuário logado ──────────────────────────────────────────────── */
 
-export async function getDeviceId(): Promise<string> {
-  // Return cached ID if available
-  if (deviceIdCache) return deviceIdCache;
-
-  try {
-    let id = await AsyncStorage.getItem(DEVICE_KEY);
-    if (!id) {
-      id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      await AsyncStorage.setItem(DEVICE_KEY, id).catch(() => {
-        // Silently fail if AsyncStorage not available
-      });
-    }
-    deviceIdCache = id;
-    return id;
-  } catch {
-    // Fallback: generate and cache a temporary ID
-    deviceIdCache = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    return deviceIdCache;
-  }
+// Os dados na nuvem e as imagens ficam ligados ao usuário (user_data.user_id e
+// a pasta <user_id>/ no Storage), protegidos por RLS — ver
+// supabase_security_migration.sql.
+export async function getCurrentUserId(): Promise<string | null> {
+  if (!supabase) return null;
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.user?.id ?? null;
 }
 
 /* ── sync ────────────────────────────────────────────────────────── */
@@ -64,14 +63,14 @@ export interface CloudData {
   looks:  any[];
 }
 
-export async function loadFromCloud(deviceId: string): Promise<CloudData | null> {
+export async function loadFromCloud(userId: string): Promise<CloudData | null> {
   if (!supabase) return null;
   try {
     const { data, error } = await supabase
-      .from('app_data')
+      .from('user_data')
       .select('trips, checks, looks')
-      .eq('device_id', deviceId)
-      .single();
+      .eq('user_id', userId)
+      .maybeSingle();
     if (error || !data) return null;
     return data as CloudData;
   } catch {
@@ -79,11 +78,11 @@ export async function loadFromCloud(deviceId: string): Promise<CloudData | null>
   }
 }
 
-export async function saveToCloud(deviceId: string, payload: CloudData): Promise<void> {
+export async function saveToCloud(userId: string, payload: CloudData): Promise<void> {
   if (!supabase) return;
   try {
-    await supabase.from('app_data').upsert({
-      device_id: deviceId,
+    await supabase.from('user_data').upsert({
+      user_id: userId,
       ...payload,
       synced_at: new Date().toISOString(),
     });
@@ -118,4 +117,30 @@ export async function uploadImage(uri: string, path: string): Promise<string | n
   } catch {
     return null;
   }
+}
+
+/* ── exclusão de conta ───────────────────────────────────────────── */
+
+// Apaga as imagens do usuário (capas e looks). Precisa rodar antes de
+// deleteAuthUser, enquanto ainda há sessão — as policies do Storage só deixam
+// cada um apagar a própria pasta. A linha em user_data sai sozinha pelo
+// on delete cascade quando o usuário é removido.
+export async function deleteCloudImages(userId: string): Promise<void> {
+  if (!supabase) return;
+  for (const folder of ['covers', 'looks']) {
+    const prefix = `${userId}/${folder}`;
+    const { data: files } = await supabase.storage.from(IMAGES_BUCKET).list(prefix, { limit: 1000 });
+    if (files?.length) {
+      await supabase.storage.from(IMAGES_BUCKET).remove(files.map((f) => `${prefix}/${f.name}`));
+    }
+  }
+}
+
+// Exclui o usuário autenticado de auth.users via função SQL `delete_user`
+// (ver supabase_delete_user_migration.sql) — o client não tem permissão de
+// apagar usuários diretamente.
+export async function deleteAuthUser(): Promise<{ error?: string }> {
+  if (!supabase) return { error: 'Supabase not configured' };
+  const { error } = await supabase.rpc('delete_user');
+  return error ? { error: error.message } : {};
 }

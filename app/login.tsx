@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
@@ -23,9 +24,16 @@ export default function LoginScreen() {
   const nav = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation("login");
-  const { loginWithEmail, verifyCode, loginWithGoogle, loading, isSignedIn } =
-    useAuth();
+  const {
+    loginWithEmail,
+    verifyCode,
+    loginWithGoogle,
+    loginWithApple,
+    loading,
+    isSignedIn,
+  } = useAuth();
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
@@ -47,10 +55,20 @@ export default function LoginScreen() {
     }).start();
   }, [scaleAnim]);
 
+  useEffect(() => {
+    if (Platform.OS !== "ios") return;
+    AppleAuthentication.isAvailableAsync().then(setAppleAvailable);
+  }, []);
+
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
     const result = await loginWithGoogle();
     setGoogleLoading(false);
+    if (result.error) Alert.alert(t("errorTitle"), result.error);
+  };
+
+  const handleAppleLogin = async () => {
+    const result = await loginWithApple();
     if (result.error) Alert.alert(t("errorTitle"), result.error);
   };
 
@@ -140,6 +158,16 @@ export default function LoginScreen() {
           <>
             {Platform.OS !== "web" && (
               <>
+                {appleAvailable && (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                    buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+                    cornerRadius={radius.lg}
+                    style={s.appleBtn}
+                    onPress={handleAppleLogin}
+                  />
+                )}
+
                 <TouchableOpacity
                   style={[s.googleBtn, googleLoading && s.buttonDisabled]}
                   onPress={handleGoogleLogin}
@@ -474,6 +502,9 @@ const s = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 2,
+  },
+  appleBtn: {
+    height: 50,
   },
   googleBtnText: {
     fontSize: 14,

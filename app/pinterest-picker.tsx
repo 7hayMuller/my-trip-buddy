@@ -29,7 +29,7 @@ import { LookPin } from "../types";
 import { getTripDays, UNASSIGNED_DAY_KEY } from "../utils/dates";
 import { OUTROS_COUNTRY } from "../utils/looks";
 import { pinterestSearchUrl } from "../utils/pinterest";
-import { getDeviceId, uploadImage } from "../utils/supabase";
+import { getCurrentUserId, uploadImage } from "../utils/supabase";
 import {
   searchPlacePhotos,
   UNSPLASH_KEY,
@@ -217,13 +217,12 @@ export default function LooksPickerScreen() {
         ? selectedDayKey
         : undefined;
 
-    const deviceId = await getDeviceId();
+    const userId = await getCurrentUserId();
     const uploadedGalleryPicks = await Promise.all(
       galleryPicks.map(async (p) => {
-        const uploadedUrl = await uploadImage(
-          p.uri,
-          `looks/${deviceId}/${p.id}.jpg`,
-        );
+        const uploadedUrl = userId
+          ? await uploadImage(p.uri, `${userId}/looks/${p.id}.jpg`)
+          : null;
         return {
           id: p.id,
           tripId: activeTrip?.id ?? "",

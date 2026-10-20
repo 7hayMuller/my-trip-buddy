@@ -36,7 +36,7 @@ import {
 } from "../../theme";
 import { CheckItem } from "../../types";
 import { formatMoney, sumExpenses } from "../../utils/currency";
-import { getDeviceId, uploadImage } from "../../utils/supabase";
+import { getCurrentUserId, uploadImage } from "../../utils/supabase";
 import { getVisaWarnings } from "../../utils/visa";
 
 /* ─── category pill colors ───────────────────────────────────── */
@@ -274,11 +274,10 @@ export default function HomeScreen() {
       if (result.canceled) return;
 
       const localUri = result.assets[0].uri;
-      const deviceId = await getDeviceId();
-      const uploadedUrl = await uploadImage(
-        localUri,
-        `covers/${deviceId}/${activeTrip.id}.jpg`,
-      );
+      const userId = await getCurrentUserId();
+      const uploadedUrl = userId
+        ? await uploadImage(localUri, `${userId}/covers/${activeTrip.id}.jpg`)
+        : null;
       // O caminho de upload é sempre o mesmo (upsert), então a URL pública
       // não muda entre trocas de capa — sem um cache-buster, o Image cacheado
       // (app e/ou CDN) continua mostrando a foto antiga mesmo após o upload.

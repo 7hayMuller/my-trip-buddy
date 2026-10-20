@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   ScrollView,
@@ -18,15 +19,51 @@ import { useTrips } from "../../hooks/useTrips";
 import { dark, radius, spacing } from "../../theme";
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
-  const { notifSettings, toggleNotifDay, setCustomNotifDay } = useTrips();
+  const { user, logout, deleteAccount } = useAuth();
+  const { notifSettings, toggleNotifDay, setCustomNotifDay, clearAllData } =
+    useTrips();
   const nav = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation("profile");
+  const [deleting, setDeleting] = useState(false);
 
   const handleLogout = async () => {
     await logout();
     nav.replace({ pathname: "/login" });
+  };
+
+  const performDeleteAccount = async () => {
+    setDeleting(true);
+    // As imagens precisam ser apagadas antes, enquanto a sessão ainda existe.
+    // Se essa limpeza falhar em parte, seguimos com a exclusão da conta mesmo
+    // assim em vez de deixar o usuário preso aqui.
+    try {
+      await clearAllData();
+    } catch (err) {
+      console.error("Erro ao apagar dados da conta:", err);
+    }
+    const result = await deleteAccount();
+    setDeleting(false);
+    if (result.error) {
+      Alert.alert(t("deleteAccountErrorTitle"), result.error);
+      return;
+    }
+    nav.replace({ pathname: "/login" });
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      t("deleteAccountConfirmTitle"),
+      t("deleteAccountConfirmMessage"),
+      [
+        { text: t("cancel"), style: "cancel" },
+        {
+          text: t("confirmDelete"),
+          style: "destructive",
+          onPress: performDeleteAccount,
+        },
+      ],
+    );
   };
 
   const notifyPermissionDenied = () => {
@@ -152,6 +189,19 @@ export default function ProfileScreen() {
               style={{ width: 22, height: 22 }}
             />
             <Text style={s.logoutText}>{t("logout")}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={s.deleteAccountButton}
+            onPress={handleDeleteAccount}
+            disabled={deleting}
+            activeOpacity={0.7}
+          >
+            {deleting ? (
+              <ActivityIndicator color={dark.muted} size="small" />
+            ) : (
+              <Text style={s.deleteAccountText}>{t("deleteAccount")}</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -380,5 +430,18 @@ const s = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     color: dark.white,
+  },
+
+  deleteAccountButton: {
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    marginTop: spacing.sm,
+  },
+
+  deleteAccountText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: dark.muted,
+    textDecorationLine: "underline",
   },
 });

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "my-trip-buddy",
+    "name": "My Trip Buddy",
     "slug": "my-trip-buddy",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,7 +9,12 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.thayna.mytripbuddy",
+      "usesAppleSignIn": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.thayna.mytripbuddy",
@@ -29,11 +34,17 @@
     "plugins": [
       "expo-router",
       "./plugins/withAsyncStorageRepo",
-      "@react-native-google-signin/google-signin",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.SUBSTITUIR_PELO_IOS_CLIENT_ID"
+        }
+      ],
+      "expo-apple-authentication",
       [
         "expo-image-picker",
         {
-          "photosPermission": "Permitir que o my-trip-buddy acesse suas fotos para escolher a capa da viagem."
+          "photosPermission": "Permitir que o My Trip Buddy acesse suas fotos para escolher a capa da viagem."
         }
       ],
       [

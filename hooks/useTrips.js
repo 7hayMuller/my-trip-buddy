@@ -1,3 +1,5 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   loadNotificationSettings,
@@ -7,7 +9,7 @@ import {
   saveNotificationSettings,
 } from "../utils/notifications";
 import { createDefaultChecks, getDefaultCheckItems, loadChecks, loadLooks, loadTrips, saveChecks, saveLooks, saveTrips } from "../utils/storage";
-import { getDeviceId, isConfigured, loadFromCloud, saveToCloud } from "../utils/supabase";
+import { deleteCloudImages, isConfigured, loadFromCloud, saveToCloud, supabase } from "../utils/supabase";
 import { getVisaWarnings } from "../utils/visa";
 
 const TripContext = createContext();
@@ -28,14 +30,15 @@ export function TripProvider({ children }) {
   const [loaded, setLoaded] = useState(false);
   const [synced, setSynced] = useState(false);
   const [notifSettings, setNotifSettings] = useState(null);
-  const deviceIdRef = React.useRef(null);
+  const userIdRef = React.useRef(null);
+  const localReadyRef = React.useRef(null);
 
   useEffect(() => {
     loadNotificationSettings().then(setNotifSettings);
   }, []);
 
   useEffect(() => {
-    (async () => {
+    localReadyRef.current = (async () => {
       // 1. Carrega dados locais primeiro (rápido)
       let t  = await loadTrips();
       let lk = await loadLooks();
@@ -60,28 +63,52 @@ export function TripProvider({ children }) {
       setChecks(c);
       setLooks(lk);
       setLoaded(true);
-
-      // 3. Sync com Supabase em background (se configurado)
-      if (isConfigured) {
-        const deviceId = await getDeviceId();
-        deviceIdRef.current = deviceId;
-        const cloud = await loadFromCloud(deviceId);
-        if (cloud && cloud.trips?.length > 0) {
-          // Nuvem tem dados: usa como fonte de verdade
-          setTrips(cloud.trips);
-          setChecks(cloud.checks ?? []);
-          setLooks(cloud.looks  ?? []);
-          await saveTrips(cloud.trips);
-          await saveChecks(cloud.checks ?? []);
-          await saveLooks(cloud.looks   ?? []);
-        } else if (t.length > 0) {
-          // Nuvem vazia mas tem dados locais: sobe para nuvem
-          await saveToCloud(deviceId, { trips: t, checks: c, looks: lk });
-        }
-        setSynced(true);
-      }
     })();
   }, []);
+
+  // 3. Sync com Supabase sempre que um usuário entra. Os dados na nuvem são
+  // por usuário (user_data, protegido por RLS), então só dá pra sincronizar
+  // com sessão ativa. Ao sair, limpa o aparelho para que o próximo usuário não
+  // herde (nem suba para a conta dele) as viagens de quem saiu.
+  useEffect(() => {
+    if (!supabase) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const userId = session?.user?.id ?? null;
+      if (event === "SIGNED_OUT") {
+        userIdRef.current = null;
+        setSynced(false);
+        clearLocalData();
+        return;
+      }
+      if (!userId || userId === userIdRef.current) return;
+      userIdRef.current = userId;
+      // Não chamar o Supabase direto dentro do callback (pode travar o client).
+      setTimeout(() => syncForUser(userId), 0);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const syncForUser = async (userId) => {
+    await localReadyRef.current;
+    const t  = await loadTrips();
+    const c  = await loadChecks();
+    const lk = await loadLooks();
+    const cloud = await loadFromCloud(userId);
+    if (userIdRef.current !== userId) return;
+    if (cloud && cloud.trips?.length > 0) {
+      // Nuvem tem dados: usa como fonte de verdade
+      setTrips(cloud.trips);
+      setChecks(cloud.checks ?? []);
+      setLooks(cloud.looks  ?? []);
+      await saveTrips(cloud.trips);
+      await saveChecks(cloud.checks ?? []);
+      await saveLooks(cloud.looks   ?? []);
+    } else if (t.length > 0) {
+      // Nuvem vazia mas tem dados locais: sobe para nuvem
+      await saveToCloud(userId, { trips: t, checks: c, looks: lk });
+    }
+    setSynced(true);
+  };
 
   const activeTrip = findNearestTrip(trips);
 
@@ -130,8 +157,8 @@ export function TripProvider({ children }) {
 
   // Dispara sync para nuvem após qualquer mudança (fire-and-forget)
   const pushToCloud = async (nextTrips, nextChecks, nextLooks) => {
-    if (!isConfigured || !deviceIdRef.current) return;
-    await saveToCloud(deviceIdRef.current, {
+    if (!isConfigured || !userIdRef.current) return;
+    await saveToCloud(userIdRef.current, {
       trips:  nextTrips  ?? trips,
       checks: nextChecks ?? checks,
       looks:  nextLooks  ?? looks,
@@ -212,6 +239,26 @@ export function TripProvider({ children }) {
     pushToCloud(null, null, next);
   };
 
+  // Limpa tudo que está no aparelho: armazenamento local, notificações
+  // agendadas e o estado em memória.
+  const clearLocalData = async () => {
+    const keys = await AsyncStorage.getAllKeys();
+    await AsyncStorage.multiRemove(keys.filter((k) => k.startsWith("@wanderlust")));
+    await Notifications.cancelAllScheduledNotificationsAsync();
+    setTrips([]);
+    setChecks([]);
+    setLooks([]);
+    setNotifSettings(await loadNotificationSettings());
+  };
+
+  // Exclusão de conta: apaga as imagens na nuvem (precisa da sessão ainda
+  // ativa) e o aparelho. A linha em user_data sai junto com o usuário, pelo
+  // on delete cascade.
+  const clearAllData = async () => {
+    if (userIdRef.current) await deleteCloudImages(userIdRef.current);
+    await clearLocalData();
+  };
+
   return (
     <TripContext.Provider
       value={{
@@ -234,6 +281,7 @@ export function TripProvider({ children }) {
         setCustomNotifDay,
         loaded,
         synced,
+        clearAllData,
       }}
     >
       {children}
