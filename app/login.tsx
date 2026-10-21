@@ -78,22 +78,11 @@ export default function LoginScreen() {
       return;
     }
 
-    const result = await loginWithEmail(email);
+    // A tela seguinte já explica que o código foi enviado; mantém o e-mail
+    // porque verifyCode precisa dele junto com o código.
+    const result = await loginWithEmail(email.trim());
     if (result.success) {
       setSent(true);
-      Alert.alert(
-        t("linkSentTitle"),
-        t("linkSentMessage", { email }),
-        [
-          {
-            text: t("ok"),
-            onPress: () => {
-              setEmail("");
-              setSent(false);
-            },
-          },
-        ],
-      );
     } else {
       Alert.alert(t("errorTitle"), result.error || t("sendLinkError"));
     }
@@ -105,7 +94,7 @@ export default function LoginScreen() {
       return;
     }
 
-    const result = await verifyCode(email, code);
+    const result = await verifyCode(email.trim(), code.trim());
     if (result.success) {
       setCode("");
       setSent(false);

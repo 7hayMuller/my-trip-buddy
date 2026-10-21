@@ -129,8 +129,11 @@ export default function ItineraryScreen() {
   useEffect(() => {
     if (!activeTrip) return;
 
+    // Voo que chega no dia da volta (ou depois) é o retorno para casa — não
+    // é um destino da viagem e não deve virar pasta de looks nem pin.
     const flightDests = flights
       .filter((f) => f.dest?.trim())
+      .filter((f) => !(f.date && activeTrip.ret && f.date >= activeTrip.ret))
       .map((f) => ({ dest: f.dest.trim(), date: f.date }));
 
     const allLabels = [...destinations];

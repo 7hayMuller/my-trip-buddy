@@ -57,7 +57,13 @@ function PulsingPin({
   );
 }
 
-export function WorldMapPin({ destinations }: { destinations: string[] }) {
+export function WorldMapPin({
+  destinations,
+  destinationCoords,
+}: {
+  destinations: string[];
+  destinationCoords?: Record<string, { lat: number; lon: number; country?: string }>;
+}) {
   const [dims, setDims] = useState({ w: 0, h: 0 });
 
   const onLayout = (e: LayoutChangeEvent) => {
@@ -84,13 +90,13 @@ export function WorldMapPin({ destinations }: { destinations: string[] }) {
       .map((f) => pathGen(f as any))
       .filter(Boolean) as string[];
 
-    const pins = getPins(destinations).map((pin) => {
+    const pins = getPins(destinations, destinationCoords).map((pin) => {
       const [px, py] = proj([pin.lon, pin.lat]) ?? [0, 0];
       return { x: px, y: py, label: pin.label };
     });
 
     return { countryPaths, pins };
-  }, [dims, destinations]);
+  }, [dims, destinations, destinationCoords]);
 
   return (
     <View style={s.card}>

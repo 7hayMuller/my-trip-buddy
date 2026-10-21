@@ -174,17 +174,32 @@ export function getDestImage(dest: string): string {
   return DESTINATION_IMAGES["default"];
 }
 
+// Prioridade: capa escolhida pelo usuário → foto do destino buscada no
+// Unsplash (autoCover, salva pela home) → tabela fixa → imagem padrão.
 export function getTripImage(trip: {
   name: string;
   destinations: string[];
   coverImage?: string;
+  autoCover?: string;
+  autoCoverFor?: string;
 }): string {
   if (trip.coverImage) return trip.coverImage;
+  // autoCover só vale para o destino que ela foi buscada (autoCoverFor) —
+  // se o usuário trocou o destino, cai na tabela até a home buscar outra.
+  if (trip.autoCover && trip.autoCoverFor === trip.destinations[0]) return trip.autoCover;
+  return getKnownTripImage(trip) ?? DESTINATION_IMAGES["default"];
+}
+
+// Foto da tabela fixa DESTINATION_IMAGES, ou null se nenhum destino/nome bate.
+export function getKnownTripImage(trip: {
+  name: string;
+  destinations: string[];
+}): string | null {
   const lower = [...trip.destinations, trip.name].join(" ").toLowerCase();
   for (const [key, url] of Object.entries(DESTINATION_IMAGES)) {
-    if (lower.includes(key)) return url;
+    if (key !== "default" && lower.includes(key)) return url;
   }
-  return DESTINATION_IMAGES["default"];
+  return null;
 }
 
 // Capa determinada só pelos destinos — sem fallback para coverImage

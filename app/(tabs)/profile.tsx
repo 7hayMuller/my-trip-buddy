@@ -1,11 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,6 +19,10 @@ import { NotifRemindersPicker } from "../../components/NotifRemindersPicker";
 import { useAuth } from "../../hooks/useAuth";
 import { useTrips } from "../../hooks/useTrips";
 import { dark, radius, spacing } from "../../theme";
+
+// Páginas publicadas pelo GitHub Pages a partir de docs/.
+const PRIVACY_URL = "https://7haymuller.github.io/my-trip-buddy/privacy.html";
+const SUPPORT_EMAIL = "mytripbuddyofficialapp@gmail.com";
 
 export default function ProfileScreen() {
   const { user, logout, deleteAccount } = useAuth();
@@ -161,7 +167,11 @@ export default function ProfileScreen() {
           />
         </View>
 
-        <TouchableOpacity style={s.settingItem} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={s.settingItem}
+          activeOpacity={0.7}
+          onPress={() => WebBrowser.openBrowserAsync(PRIVACY_URL)}
+        >
           <View style={s.settingIcon}>
             <Ionicons name="lock-closed-outline" size={20} color={dark.white} />
           </View>
@@ -169,7 +179,15 @@ export default function ProfileScreen() {
           <Ionicons name="chevron-forward" size={18} color={dark.muted} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={s.settingItem} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={s.settingItem}
+          activeOpacity={0.7}
+          onPress={() =>
+            Linking.openURL(
+              `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("My Trip Buddy — Ajuda")}`,
+            )
+          }
+        >
           <View style={s.settingIcon}>
             <Ionicons name="help-circle-outline" size={20} color={dark.white} />
           </View>

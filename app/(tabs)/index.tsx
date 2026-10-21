@@ -4,7 +4,7 @@ import { enUS, ptBR } from "date-fns/locale";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -29,6 +29,7 @@ import i18n from "../../i18n";
 import {
   colors,
   dark as DARK,
+  getKnownTripImage,
   getTripImage,
   radius,
   shadow,
@@ -36,6 +37,8 @@ import {
 } from "../../theme";
 import { CheckItem } from "../../types";
 import { formatMoney, sumExpenses } from "../../utils/currency";
+import { searchPlaces } from "../../utils/geocode";
+import { searchPlacePhotos } from "../../utils/unsplash";
 import { getCurrentUserId, uploadImage } from "../../utils/supabase";
 import { getVisaWarnings } from "../../utils/visa";
 
@@ -164,6 +167,60 @@ export default function HomeScreen() {
   const [showEditMenu, setShowEditMenu] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
+
+  // Completa em segundo plano o que a home precisa e as tabelas fixas não
+  // cobrem, numa única updateTrip (duas chamadas seguidas usariam a mesma
+  // lista de trips e a segunda desfaria a primeira):
+  // - coordenadas dos destinos fora de DEST_COORDS, pro pin do mapa (mesmo
+  //   destinationCoords que o roteiro preenche);
+  // - foto do primeiro destino no Unsplash, quando não há capa escolhida
+  //   nem foto na tabela DESTINATION_IMAGES.
+  useEffect(() => {
+    if (!activeTrip) return;
+    const destinations: string[] = activeTrip.destinations ?? [];
+    const missingCoords = destinations.filter(
+      (d) => !activeTrip.destinationCoords?.[d],
+    );
+    const needsCover =
+      destinations.length > 0 &&
+      !activeTrip.coverImage &&
+      activeTrip.autoCoverFor !== destinations[0] &&
+      !getKnownTripImage(activeTrip);
+    if (missingCoords.length === 0 && !needsCover) return;
+
+    let cancelled = false;
+    (async () => {
+      const coordUpdates: Record<string, { lat: number; lon: number; country?: string }> = {};
+      for (const dest of missingCoords) {
+        const [best] = await searchPlaces(dest, 1);
+        if (best) coordUpdates[dest] = { lat: best.lat, lon: best.lon, country: best.country };
+      }
+
+      let autoCover: string | undefined;
+      if (needsCover) {
+        try {
+          const [photo] = await searchPlacePhotos(destinations[0], 1);
+          autoCover = photo?.urls.regular;
+        } catch {}
+      }
+
+      if (cancelled) return;
+      const data: Record<string, unknown> = {};
+      if (Object.keys(coordUpdates).length > 0) {
+        data.destinationCoords = { ...(activeTrip.destinationCoords ?? {}), ...coordUpdates };
+      }
+      if (autoCover) {
+        data.autoCover = autoCover;
+        data.autoCoverFor = destinations[0];
+      }
+      if (Object.keys(data).length > 0) await updateTrip(activeTrip.id, data);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTrip?.id, (activeTrip?.destinations ?? []).join("|")]);
 
   if (trips.length === 0) {
     return <EmptyStateTrips />;
@@ -409,7 +466,10 @@ export default function HomeScreen() {
         {activeTrip && (activeTrip.destinations?.length ?? 0) > 0 && (
           <>
             <Text style={s.secLabel}>{t("destinationOnMap")}</Text>
-            <WorldMapPin destinations={activeTrip.destinations ?? []} />
+            <WorldMapPin
+              destinations={activeTrip.destinations ?? []}
+              destinationCoords={activeTrip.destinationCoords}
+            />
           </>
         )}
 

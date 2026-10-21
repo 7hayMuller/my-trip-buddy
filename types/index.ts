@@ -38,6 +38,10 @@ export interface Trip {
   itineraryPointCoords?: Record<string, { lat: number; lon: number; country?: string }>;
   itineraryPointDates?: Record<string, string>;
   coverImage?: string;
+  // Foto do primeiro destino buscada no Unsplash pela home quando não há capa
+  // escolhida; autoCoverFor guarda pra qual destino ela foi buscada.
+  autoCover?: string;
+  autoCoverFor?: string;
   // Orçamento da viagem (tela app/budget.tsx). budgetCurrency é a moeda de
   // referência em que budgetTotal e o total gasto são exibidos — despesas
   // registradas em outra moeda guardam o valor original e o convertido.
