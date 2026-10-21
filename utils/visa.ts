@@ -7,6 +7,8 @@ const VISA_RULES: Array<{
   keywords: string[];
   message: string;
   status: 'required' | 'on_arrival';
+  // Isenção temporária: viagens que começam até essa data não precisam de visto.
+  exemptUntil?: string;
 }> = [
   {
     keywords: ['eua', 'estados unidos', 'usa', 'new york', 'nova york', 'miami',
@@ -16,23 +18,25 @@ const VISA_RULES: Array<{
   },
   {
     keywords: ['canada', 'canadá', 'toronto', 'vancouver', 'montreal', 'calgary'],
-    message: 'Canadá: visto obrigatório para brasileiros.',
+    message: 'Canadá: visto obrigatório (ou eTA, para quem teve visto canadense nos últimos 10 anos ou tem visto americano válido).',
     status: 'required',
   },
   {
     keywords: ['austrália', 'australia', 'sydney', 'melbourne', 'brisbane', 'perth'],
-    message: 'Austrália: ETA ou visto obrigatório.',
+    message: 'Austrália: visto de visitante obrigatório (pedido online).',
     status: 'required',
   },
   {
     keywords: ['reino unido', 'uk', 'inglaterra', 'london', 'londres', 'scotland', 'escócia'],
-    message: 'Reino Unido: visto obrigatório para brasileiros.',
-    status: 'required',
+    message: 'Reino Unido: sem visto, mas a autorização eletrônica ETA é obrigatória.',
+    status: 'on_arrival',
   },
   {
     keywords: ['china', 'beijing', 'pequim', 'shanghai', 'xangai', 'guangzhou', 'chengdu'],
     message: 'China: visto obrigatório para brasileiros.',
     status: 'required',
+    // Isenção de até 30 dias para brasileiros, prorrogada até 31/12/2026.
+    exemptUntil: '2026-12-31',
   },
   {
     keywords: ['india', 'índia', 'mumbai', 'delhi', 'bangalore', 'kolkata'],
@@ -43,21 +47,6 @@ const VISA_RULES: Array<{
     keywords: ['nova zelândia', 'new zealand', 'auckland', 'wellington'],
     message: 'Nova Zelândia: NZeTA obrigatório para brasileiros.',
     status: 'required',
-  },
-  {
-    keywords: ['rússia', 'russia', 'moscou', 'moscow', 'são petersburgo', 'st petersburg'],
-    message: 'Rússia: visto obrigatório para brasileiros.',
-    status: 'required',
-  },
-  {
-    keywords: ['tailândia', 'thailand', 'bangkok', 'phuket', 'chiang mai'],
-    message: 'Tailândia: visto na chegada disponível (30 dias).',
-    status: 'on_arrival',
-  },
-  {
-    keywords: ['turquia', 'turkey', 'istambul', 'istanbul', 'capadócia', 'cappadocia'],
-    message: 'Turquia: e-Visa necessário para brasileiros.',
-    status: 'on_arrival',
   },
   {
     keywords: ['egito', 'egypt', 'cairo', 'luxor', 'aswan'],
@@ -86,7 +75,13 @@ const VISA_RULES: Array<{
   },
 ];
 
-export function getVisaWarnings(destinations: string[], origin = 'Brasil'): VisaWarning[] {
+// Rússia, Tailândia e Turquia não estão na lista: brasileiros entram sem visto
+// para turismo.
+export function getVisaWarnings(
+  destinations: string[],
+  origin = 'Brasil',
+  depart?: string,
+): VisaWarning[] {
   const originLower = origin.toLowerCase().trim();
   const isBrazilian =
     !originLower ||
@@ -95,14 +90,21 @@ export function getVisaWarnings(destinations: string[], origin = 'Brasil'): Visa
 
   if (!isBrazilian) return [];
 
-  const destText = destinations.join(' ').toLowerCase();
+  const destText = destinations.join(' ');
+  const travelDate = depart || new Date().toISOString().slice(0, 10);
   const warnings: VisaWarning[] = [];
 
   for (const rule of VISA_RULES) {
-    if (rule.keywords.some((kw) => destText.includes(kw))) {
+    if (rule.exemptUntil && travelDate <= rule.exemptUntil) continue;
+    if (rule.keywords.some((kw) => matchesWord(destText, kw))) {
       warnings.push({ message: rule.message, status: rule.status });
     }
   }
 
   return warnings;
+}
+
+// Palavra inteira — com includes, 'uk' batia em "Ukraine" e 'usa' em "Busan".
+function matchesWord(text: string, kw: string): boolean {
+  return new RegExp(`(^|[^\\p{L}])${kw}($|[^\\p{L}])`, 'iu').test(text);
 }

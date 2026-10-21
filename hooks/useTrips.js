@@ -32,6 +32,11 @@ export function TripProvider({ children }) {
   const [notifSettings, setNotifSettings] = useState(null);
   const userIdRef = React.useRef(null);
   const localReadyRef = React.useRef(null);
+  // Lista mais recente de viagens — updateTrip lê daqui para que duas chamadas
+  // seguidas (ex.: capa local e depois a URL do upload) não usem a mesma lista
+  // antiga e a segunda desfaça a primeira.
+  const tripsRef = React.useRef(trips);
+  tripsRef.current = trips;
 
   useEffect(() => {
     loadNotificationSettings().then(setNotifSettings);
@@ -50,8 +55,8 @@ export function TripProvider({ children }) {
         const hasChecks = c.some((ch) => ch.tripId === trip.id);
         if (!hasChecks) {
           const seeded = createDefaultChecks(trip.id, trip);
-          getVisaWarnings(trip.destinations ?? [], trip.origin ?? 'Brasil').forEach((w, i) => {
-            seeded.push({ id: `${trip.id}_visa_${i}`, tripId: trip.id, text: `Solicitar visto — ${w.message.split(':')[0]}`, cat: 'visa', done: false });
+          getVisaWarnings(trip.destinations ?? [], trip.origin ?? 'Brasil', trip.depart).forEach((w, i) => {
+            seeded.push({ id: `${trip.id}_visa_${i}`, tripId: trip.id, text: `Visto/autorização de entrada — ${w.message.split(':')[0]}`, cat: 'visa', done: false });
           });
           c = [...c, ...seeded];
           dirty = true;
@@ -175,8 +180,8 @@ export function TripProvider({ children }) {
     await saveTrips(next);
 
     const tripChecks = createDefaultChecks(id, trip);
-    getVisaWarnings(trip.destinations ?? [], trip.origin ?? 'Brasil').forEach((w, i) => {
-      tripChecks.push({ id: `${id}_visa_${i}`, tripId: id, text: `Solicitar visto — ${w.message.split(':')[0]}`, cat: 'visa', done: false });
+    getVisaWarnings(trip.destinations ?? [], trip.origin ?? 'Brasil', trip.depart).forEach((w, i) => {
+      tripChecks.push({ id: `${id}_visa_${i}`, tripId: id, text: `Visto/autorização de entrada — ${w.message.split(':')[0]}`, cat: 'visa', done: false });
     });
     const nextChecks = [...checks, ...tripChecks];
     setChecks(nextChecks);
@@ -185,7 +190,8 @@ export function TripProvider({ children }) {
   };
 
   const updateTrip = async (id, data) => {
-    const next = trips.map((t) => (t.id === id ? { ...t, ...data } : t));
+    const next = tripsRef.current.map((t) => (t.id === id ? { ...t, ...data } : t));
+    tripsRef.current = next;
     setTrips(next);
     await saveTrips(next);
     pushToCloud(next, null, null);

@@ -555,7 +555,13 @@ export default function TripFormScreen() {
       hotels: cleanHotels,
     };
     if (isEdit && existing) {
-      await updateTrip(existing.id, tripData);
+      // Trocou o destino principal: a capa escolhida era do destino antigo,
+      // então volta para a foto automática do novo destino.
+      const destChanged = existing.destinations?.[0] !== tripData.destinations[0];
+      await updateTrip(
+        existing.id,
+        destChanged ? { ...tripData, coverImage: undefined } : tripData,
+      );
     } else {
       await addTrip(tripData);
     }
@@ -1074,7 +1080,7 @@ export default function TripFormScreen() {
                 </>
               )}
 
-              {getVisaWarnings(dests, origin).length > 0 && (
+              {getVisaWarnings(dests, origin, toIso(depart)).length > 0 && (
                 <View style={s.visaCard}>
                   <View style={s.visaHeader}>
                     <Image
@@ -1083,7 +1089,7 @@ export default function TripFormScreen() {
                     />
                     <Text style={s.visaTitle}>{t("visaWarningTitle")}</Text>
                   </View>
-                  {getVisaWarnings(dests, origin).map((w, i) => (
+                  {getVisaWarnings(dests, origin, toIso(depart)).map((w, i) => (
                     <Text key={i} style={s.visaMsg}>
                       • {w.message}
                     </Text>
@@ -1095,7 +1101,7 @@ export default function TripFormScreen() {
               <SectionLabel text={t("generatedChecklist")} />
               <View style={s.card}>
                 {(() => {
-                  const visaItems = getVisaWarnings(dests, origin);
+                  const visaItems = getVisaWarnings(dests, origin, toIso(depart));
                   const allItems = [
                     ...getDefaultCheckItems({
                       destinations: dests,

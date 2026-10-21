@@ -51,16 +51,22 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <TripProvider>
         <ThemeProvider value={DarkTheme}>
+          {/* Stack.Protected bloqueia as rotas de verdade — só omitir os
+              Stack.Screen não impedia o app de abrir direto na home (rota
+              inicial) sem sessão, mostrando "Usuário" no perfil. */}
           <Stack screenOptions={{ headerShown: false }}>
-            {!isSignedIn ? (
+            <Stack.Protected guard={!isSignedIn}>
               <Stack.Screen name="login" />
-            ) : (
-              <>
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="pinterest-picker" />
-                <Stack.Screen name="modal" options={{ presentation: "modal" }} />
-              </>
-            )}
+            </Stack.Protected>
+            <Stack.Protected guard={isSignedIn}>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="pinterest-picker" />
+              <Stack.Screen name="trip-form" />
+              <Stack.Screen name="budget" />
+              <Stack.Screen name="looks-days" />
+              <Stack.Screen name="look-viewer" />
+              <Stack.Screen name="modal" options={{ presentation: "modal" }} />
+            </Stack.Protected>
           </Stack>
           <StatusBar style="light" />
         </ThemeProvider>

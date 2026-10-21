@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { differenceInDays, format } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as ImagePicker from "expo-image-picker";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -29,7 +30,6 @@ import i18n from "../../i18n";
 import {
   colors,
   dark as DARK,
-  getKnownTripImage,
   getTripImage,
   radius,
   shadow,
@@ -174,7 +174,7 @@ export default function HomeScreen() {
   // - coordenadas dos destinos fora de DEST_COORDS, pro pin do mapa (mesmo
   //   destinationCoords que o roteiro preenche);
   // - foto do primeiro destino no Unsplash, quando não há capa escolhida
-  //   nem foto na tabela DESTINATION_IMAGES.
+  //   (a tabela DESTINATION_IMAGES fica só como fallback enquanto busca).
   useEffect(() => {
     if (!activeTrip) return;
     const destinations: string[] = activeTrip.destinations ?? [];
@@ -184,8 +184,7 @@ export default function HomeScreen() {
     const needsCover =
       destinations.length > 0 &&
       !activeTrip.coverImage &&
-      activeTrip.autoCoverFor !== destinations[0] &&
-      !getKnownTripImage(activeTrip);
+      activeTrip.autoCoverFor !== destinations[0];
     if (missingCoords.length === 0 && !needsCover) return;
 
     let cancelled = false;
@@ -262,6 +261,7 @@ export default function HomeScreen() {
     ? getVisaWarnings(
         activeTrip.destinations ?? [],
         activeTrip.origin ?? "Brasil",
+        activeTrip.depart,
       )
     : [];
 
@@ -330,18 +330,26 @@ export default function HomeScreen() {
       });
       if (result.canceled) return;
 
-      const localUri = result.assets[0].uri;
+      // Mostra a foto local na hora e reduz para 1200px antes do upload — a
+      // foto original da câmera tem vários MB e travava a troca por segundos.
+      const tripId = activeTrip.id;
+      const resized = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 1200 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      await updateTrip(tripId, { coverImage: resized.uri });
+
       const userId = await getCurrentUserId();
       const uploadedUrl = userId
-        ? await uploadImage(localUri, `${userId}/covers/${activeTrip.id}.jpg`)
+        ? await uploadImage(resized.uri, `${userId}/covers/${tripId}.jpg`)
         : null;
       // O caminho de upload é sempre o mesmo (upsert), então a URL pública
       // não muda entre trocas de capa — sem um cache-buster, o Image cacheado
       // (app e/ou CDN) continua mostrando a foto antiga mesmo após o upload.
-      const coverImage = uploadedUrl
-        ? `${uploadedUrl}?v=${Date.now()}`
-        : localUri;
-      await updateTrip(activeTrip.id, { coverImage });
+      if (uploadedUrl) {
+        await updateTrip(tripId, { coverImage: `${uploadedUrl}?v=${Date.now()}` });
+      }
     } catch (err) {
       console.error("Erro ao trocar capa da viagem:", err);
       Alert.alert(t("changeCoverErrorTitle"), t("tryAgain"));

@@ -195,11 +195,18 @@ export function getKnownTripImage(trip: {
   name: string;
   destinations: string[];
 }): string | null {
-  const lower = [...trip.destinations, trip.name].join(" ").toLowerCase();
+  const text = [...trip.destinations, trip.name].join(" ");
   for (const [key, url] of Object.entries(DESTINATION_IMAGES)) {
-    if (key !== "default" && lower.includes(key)) return url;
+    if (key !== "default" && matchesWord(text, key)) return url;
   }
   return null;
+}
+
+// Compara palavra inteira — com includes, "ny" batia em "Germany"/"Kenya" e
+// "roma" em "Romania", mostrando a foto de Nova York/Roma.
+function matchesWord(text: string, key: string): boolean {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(^|[^\\p{L}])${escaped}($|[^\\p{L}])`, "iu").test(text);
 }
 
 // Capa determinada só pelos destinos — sem fallback para coverImage
