@@ -1,5 +1,5 @@
 // Coordenadas reais (lon, lat) por destino conhecido — usado tanto pelo mapa
-// estilizado (WorldMapPin) quanto pelo mapa real (DestinationMap/Leaflet).
+// estilizado (WorldMapPin) quanto pelo mapa real (ItineraryMap).
 export const DEST_COORDS: Record<string, { lon: number; lat: number }> = {
   // Japão
   japão:           { lon: 138.0,  lat: 36.0  },

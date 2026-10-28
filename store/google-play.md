@@ -25,7 +25,7 @@ Roteiro, checklist, looks e orçamento da sua viagem, tudo num lugar só.
 > Veja seus destinos no mapa e navegue pelo roteiro dia a dia.
 >
 > ✅ CHECKLIST AUTOMÁTICO
-> Ao criar uma viagem, o app monta um checklist com o essencial — passaporte, seguro, check-in, adaptador de tomada — e avisa quando o destino pode exigir visto.
+> Ao criar uma viagem, o app monta um checklist com o essencial — passaporte, seguro, check-in, adaptador de tomada — e lembra você de conferir se o destino exige visto.
 >
 > 👗 LOOKS DA MALA
 > Monte os looks de cada dia com fotos da sua galeria ou inspirações do Pinterest e nunca mais esqueça uma peça.

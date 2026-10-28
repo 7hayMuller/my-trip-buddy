@@ -98,7 +98,7 @@ export function IconHome({ size = 28, color }: IconHomeProps) {
         rx="1.5"
         fill="#E74C3C"
       />
-      <Ellipse cx="44.5" cy="15" rx="2.5" ry="1.5" fill="#C0392B" />
+      <Ellipse cx={44.5} cy={15} rx={2.5} ry={1.5} fill="#C0392B" />
     </Svg>
   );
 }

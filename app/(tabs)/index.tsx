@@ -40,7 +40,6 @@ import { formatMoney, sumExpenses } from "../../utils/currency";
 import { searchPlaces } from "../../utils/geocode";
 import { searchPlacePhotos } from "../../utils/unsplash";
 import { getCurrentUserId, uploadImage } from "../../utils/supabase";
-import { getVisaWarnings } from "../../utils/visa";
 
 /* ─── category pill colors ───────────────────────────────────── */
 
@@ -256,14 +255,6 @@ export default function HomeScreen() {
     (activeTrip
       ? [{ from: "???", fromCity: "Origem", to: "???", toCity: "Destino" }]
       : []);
-
-  const visaWarnings = activeTrip
-    ? getVisaWarnings(
-        activeTrip.destinations ?? [],
-        activeTrip.origin ?? "Brasil",
-        activeTrip.depart,
-      )
-    : [];
 
   // Fallback para hotéis sem checkIn/checkOut próprios (criados antes dessa
   // feature): divide os dias da viagem igualmente entre os hotéis.
@@ -583,6 +574,7 @@ export default function HomeScreen() {
                     <HotelCard
                       key={i}
                       hotelName={hotel.name}
+                      placeId={hotel.placeId}
                       city={hotel.dest || activeTrip.destinations?.[0] || ""}
                       checkIn={checkIn}
                       checkOut={checkOut}
@@ -592,25 +584,6 @@ export default function HomeScreen() {
                 })
             )}
           </>
-        )}
-
-        {visaWarnings.length > 0 && (
-          <View style={s.visaCard}>
-            <View style={s.visaHeader}>
-              <Image
-                source={require("../../assets/images/icon-warning.png")}
-                style={{ width: 18, height: 18 }}
-              />
-              <Text style={s.visaTitle}>
-                {t("visaWarningTitle")}
-              </Text>
-            </View>
-            {visaWarnings.map((w, i) => (
-              <Text key={i} style={s.visaMsg}>
-                • {w.message}
-              </Text>
-            ))}
-          </View>
         )}
 
         {activeTrip && (
@@ -1063,34 +1036,6 @@ const s = StyleSheet.create({
   },
   budgetCardIcon: { width: 34, height: 34 },
   budgetCardChevron: { marginLeft: spacing.sm },
-
-  /* visa warning */
-  visaCard: {
-    backgroundColor: "rgba(236,226,46,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(236,226,46,0.35)",
-    borderRadius: radius.xl,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-  visaHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: spacing.xs,
-  },
-  visaTitle: {
-    fontSize: 11,
-    fontWeight: "800",
-    color: DARK.yellow,
-    flex: 1,
-  },
-  visaMsg: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: DARK.yellow,
-    marginBottom: 2,
-  },
 
   /* card */
   card: {

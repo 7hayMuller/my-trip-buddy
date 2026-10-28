@@ -12,26 +12,43 @@ import {
   View,
 } from "react-native";
 import { dark, radius, spacing } from "../theme";
-import { GeoSearchResult, searchPlaces } from "../utils/geocode";
+import {
+  getPlaceLocation,
+  HotelSuggestion as PlaceSuggestion,
+  newSessionToken,
+  searchPlacesAutocomplete,
+} from "../utils/placesService";
 
-export function DestinationSearch({
+// Rótulo curto no formato antigo (lugar, cidade, país): nome + o começo do
+// endereço que o autocomplete do Google devolve.
+function labelFor(r: PlaceSuggestion): string {
+  const parts = [r.name, ...r.address.split(",").map((p) => p.trim())].filter(Boolean);
+  return parts.slice(0, 3).join(", ");
+}
+
+export function ItineraryPlaceSearch({
   onAddDestination,
 }: {
   onAddDestination: (label: string, lat: number, lon: number, country?: string) => void;
 }) {
   const { t } = useTranslation("destinationSearch");
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<GeoSearchResult[]>([]);
+  const [results, setResults] = useState<PlaceSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sessionRef = useRef(newSessionToken());
+  // Descarta respostas atrasadas de buscas anteriores.
+  const lastQueryRef = useRef("");
 
   const runSearch = async (q: string) => {
     if (!q.trim()) {
       setResults([]);
       return;
     }
+    lastQueryRef.current = q;
     setSearching(true);
-    const found = await searchPlaces(q);
+    const found = await searchPlacesAutocomplete(q, sessionRef.current);
+    if (lastQueryRef.current !== q) return;
     setResults(found);
     setSearching(false);
   };
@@ -39,14 +56,19 @@ export function DestinationSearch({
   const handleQueryChange = (text: string) => {
     setQuery(text);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => runSearch(text), 500);
+    debounceRef.current = setTimeout(() => runSearch(text), 350);
   };
 
-  const pickResult = (r: GeoSearchResult) => {
-    onAddDestination(r.label, r.lat, r.lon, r.country);
-    setQuery("");
-    setResults([]);
+  const pickResult = async (r: PlaceSuggestion) => {
     Keyboard.dismiss();
+    setResults([]);
+    setSearching(true);
+    const loc = await getPlaceLocation(r.placeId, sessionRef.current);
+    sessionRef.current = newSessionToken();
+    setSearching(false);
+    if (!loc) return;
+    onAddDestination(labelFor(r), loc.lat, loc.lon, loc.country);
+    setQuery("");
   };
 
   return (
@@ -78,9 +100,9 @@ export function DestinationSearch({
 
       {results.length > 0 && (
         <View style={s.resultsList}>
-          {results.map((r, i) => (
+          {results.map((r) => (
             <TouchableOpacity
-              key={`${r.label}-${i}`}
+              key={r.placeId}
               style={s.resultRow}
               onPress={() => pickResult(r)}
               activeOpacity={0.7}
@@ -89,9 +111,16 @@ export function DestinationSearch({
                 source={require("../assets/images/icon-pin.png")}
                 style={{ width: 20, height: 20 }}
               />
-              <Text style={s.resultText} numberOfLines={1}>
-                {r.label}
-              </Text>
+              <View style={{ flex: 1 }}>
+                <Text style={s.resultText} numberOfLines={1}>
+                  {r.name}
+                </Text>
+                {!!r.address && (
+                  <Text style={s.resultAddr} numberOfLines={1}>
+                    {r.address}
+                  </Text>
+                )}
+              </View>
             </TouchableOpacity>
           ))}
         </View>
@@ -139,7 +168,8 @@ const s = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: dark.border,
   },
-  resultText: { flex: 1, fontSize: 12, fontWeight: "700", color: dark.white },
+  resultText: { fontSize: 12, fontWeight: "700", color: dark.white },
+  resultAddr: { fontSize: 10, fontWeight: "600", color: dark.muted, marginTop: 1 },
   noResults: {
     fontSize: 11,
     fontWeight: "600",

@@ -101,7 +101,7 @@ function buildLeafletHtml(
 </html>`;
 }
 
-export function DestinationMap({
+export function ItineraryMap({
   destinations,
   destinationCoords,
   fallbackCenter,

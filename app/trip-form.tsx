@@ -26,13 +26,14 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import i18n from "../i18n";
+import HotelAutocomplete from "../components/HotelAutocomplete";
 import { TripDateRangePicker } from "../components/TripDateRangePicker";
 import { useTrips } from "../hooks/useTrips";
 import { dark, radius, shadow, spacing } from "../theme";
 import { FlightEntry, HotelEntry, Trip } from "../types";
 import { getTripDays } from "../utils/dates";
+import type { PlaceHotelDetails } from "../utils/placesService";
 import { getDefaultCheckItems } from "../utils/storage";
-import { getVisaWarnings } from "../utils/visa";
 
 // ─── step config ──────────────────────────────────────────────────────────────
 // Título/subtítulo de cada step vêm de i18n (namespace tripForm) — ver
@@ -335,7 +336,6 @@ export default function TripFormScreen() {
     existing?.depart ? toBr(existing.depart) : "",
   );
   const [ret, setRet] = useState(existing?.ret ? toBr(existing.ret) : "");
-  const [origin, setOrigin] = useState(existing?.origin ?? "Brasil");
 
   // step 2 — multiple flights
   const [flights, setFlights] = useState<FlightEntry[]>(() => {
@@ -384,7 +384,6 @@ export default function TripFormScreen() {
     setDestIn("");
     setDepart(trip?.depart ? toBr(trip.depart) : "");
     setRet(trip?.ret ? toBr(trip.ret) : "");
-    setOrigin(trip?.origin ?? "Brasil");
 
     if (trip?.flights?.length) {
       setFlights(
@@ -473,6 +472,29 @@ export default function TripFormScreen() {
 
   const updateHotel = (i: number, key: keyof HotelEntry, val: string) =>
     setHotels((p) => p.map((h, j) => (j === i ? { ...h, [key]: val } : h)));
+  // Digitar à mão desfaz o vínculo com o lugar escolhido no autocomplete.
+  const renameHotel = (i: number, name: string) =>
+    setHotels((p) =>
+      p.map((h, j) =>
+        j === i
+          ? { ...h, name, placeId: undefined, address: undefined, photoUrl: undefined }
+          : h,
+      ),
+    );
+  const selectHotelPlace = (i: number, place: PlaceHotelDetails) =>
+    setHotels((p) =>
+      p.map((h, j) =>
+        j === i
+          ? {
+              ...h,
+              name: place.name,
+              placeId: place.placeId,
+              address: place.address || undefined,
+              photoUrl: place.photoUrl ?? undefined,
+            }
+          : h,
+      ),
+    );
   const removeHotel = (i: number) =>
     setHotels((p) => p.filter((_, j) => j !== i));
   const addHotel = () =>
@@ -546,7 +568,6 @@ export default function TripFormScreen() {
       destinations: dests.length ? dests : ["Destino"],
       depart: isoDepart,
       ret: isoRet,
-      origin: origin.trim() || "Brasil",
       flightNumber: cleanFlights[0]?.flightNumber ?? "",
       hotelName: cleanHotels[0]?.name ?? "",
       hotelConf: cleanHotels[0]?.conf ?? "",
@@ -683,21 +704,6 @@ export default function TripFormScreen() {
                     <Ionicons name="add" size={18} color={dark.ink} />
                   </TouchableOpacity>
                 </View>
-              </View>
-
-              <SectionLabel text={t("passportOrigin")} />
-              <View style={s.card}>
-                <Label
-                  text={t("passportCountry")}
-                  hint={t("passportCountryHint")}
-                />
-                <TextInput
-                  style={s.input}
-                  value={origin}
-                  onChangeText={setOrigin}
-                  placeholder={t("originPlaceholder")}
-                  placeholderTextColor={dark.muted}
-                />
               </View>
 
               <SectionLabel text={t("dates")} />
@@ -913,19 +919,14 @@ export default function TripFormScreen() {
                   )}
 
                   <Label text={t("hotelName")} />
-                  <View style={s.iconInputWrap}>
-                    <Image
-                      source={require("../assets/images/icon-building.png")}
-                      style={[s.iconInput, { width: 18, height: 18 }]}
-                    />
-                    <TextInput
-                      style={[s.input, s.inputIcon]}
-                      value={h.name}
-                      onChangeText={(txt) => updateHotel(i, "name", txt)}
-                      placeholder={t("hotelNamePlaceholder")}
-                      placeholderTextColor={dark.muted}
-                    />
-                  </View>
+                  <HotelAutocomplete
+                    value={h.name}
+                    dest={h.dest}
+                    photoUrl={h.photoUrl}
+                    placeholder={t("hotelNamePlaceholder")}
+                    onChangeText={(txt) => renameHotel(i, txt)}
+                    onSelect={(place) => selectHotelPlace(i, place)}
+                  />
 
                   {tripDayList.length > 0 && (
                     <>
@@ -1080,39 +1081,25 @@ export default function TripFormScreen() {
                 </>
               )}
 
-              {getVisaWarnings(dests, origin, toIso(depart)).length > 0 && (
-                <View style={s.visaCard}>
-                  <View style={s.visaHeader}>
-                    <Image
-                      source={require("../assets/images/icon-warning.png")}
-                      style={{ width: 18, height: 18 }}
-                    />
-                    <Text style={s.visaTitle}>{t("visaWarningTitle")}</Text>
-                  </View>
-                  {getVisaWarnings(dests, origin, toIso(depart)).map((w, i) => (
-                    <Text key={i} style={s.visaMsg}>
-                      • {w.message}
-                    </Text>
-                  ))}
-                  <Text style={s.visaTip}>{t("visaTip")}</Text>
+              <View style={s.visaCard}>
+                <View style={s.visaHeader}>
+                  <Image
+                    source={require("../assets/images/icon-warning.png")}
+                    style={{ width: 18, height: 18 }}
+                  />
+                  <Text style={s.visaTitle}>{t("visaWarningTitle")}</Text>
                 </View>
-              )}
+                <Text style={s.visaMsg}>{t("visaWarningMessage")}</Text>
+              </View>
 
               <SectionLabel text={t("generatedChecklist")} />
               <View style={s.card}>
                 {(() => {
-                  const visaItems = getVisaWarnings(dests, origin, toIso(depart));
-                  const allItems = [
-                    ...getDefaultCheckItems({
-                      destinations: dests,
-                      hotels,
-                      flights,
-                    }),
-                    ...visaItems.map((w) => ({
-                      cat: "visa",
-                      text: `${t("visaChecklistPrefix")}${w.message.split(":")[0]}`,
-                    })),
-                  ];
+                  const allItems = getDefaultCheckItems({
+                    destinations: dests,
+                    hotels,
+                    flights,
+                  });
                   return allItems.map((item, i) => {
                     const cs =
                       CAT_STYLE[item.cat as keyof typeof CAT_STYLE] ??
@@ -1549,12 +1536,5 @@ const s = StyleSheet.create({
     fontWeight: "600",
     color: dark.yellow,
     marginBottom: 3,
-  },
-  visaTip: {
-    fontSize: 10,
-    color: dark.yellow,
-    fontWeight: "600",
-    marginTop: spacing.xs,
-    opacity: 0.8,
   },
 });

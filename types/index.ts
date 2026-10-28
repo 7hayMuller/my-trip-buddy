@@ -16,6 +16,12 @@ export interface HotelEntry {
   // automática dos dias da viagem (ver hotelDates em app/(tabs)/index.tsx).
   checkIn?: string;
   checkOut?: string;
+  // Preenchidos quando o hotel é escolhido no autocomplete do Google Places
+  // (components/HotelAutocomplete). placeId é o que vale guardar — a photoUrl
+  // é só a prévia do momento e o HotelCard busca uma nova pelo placeId.
+  placeId?: string;
+  address?: string;
+  photoUrl?: string;
 }
 
 export interface Trip {

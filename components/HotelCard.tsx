@@ -26,12 +26,15 @@ import {
     HotelDetails,
     priceLevelLabel,
 } from "../utils/hotelDataService";
+import { getHotelDetails } from "../utils/placesService";
 
 // Limpa cache na primeira montagem do app (garante refresh após troca de chave)
 let _cacheClearedOnce = false;
 
 interface HotelCardProps {
   hotelName: string;
+  // Hotel escolhido no autocomplete: foto/avaliação reais via Places.
+  placeId?: string;
   city: string;
   checkIn: string; // YYYY-MM-DD
   checkOut: string; // YYYY-MM-DD
@@ -41,6 +44,7 @@ interface HotelCardProps {
 
 export default function HotelCard({
   hotelName,
+  placeId,
   city,
   checkIn,
   checkOut,
@@ -61,7 +65,10 @@ export default function HotelCard({
         _cacheClearedOnce = true;
         await clearHotelCache();
       }
-      const data = await fetchHotelDetails(hotelName, city);
+      const place = placeId ? await getHotelDetails(placeId) : null;
+      const data = place
+        ? { ...place, fetchedAt: Date.now() }
+        : await fetchHotelDetails(hotelName, city);
       if (active) {
         setDetails(data);
         setLoading(false);
@@ -70,7 +77,7 @@ export default function HotelCard({
     return () => {
       active = false;
     };
-  }, [hotelName, city]);
+  }, [hotelName, placeId, city]);
 
   const fmt = (d: string) => {
     try {

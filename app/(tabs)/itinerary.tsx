@@ -16,8 +16,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DateCarousel } from "../../components/DateCarousel";
-import { DestinationMap } from "../../components/DestinationMap";
-import { DestinationSearch } from "../../components/DestinationSearch";
+import { ItineraryMap } from "../../components/ItineraryMap";
+import { ItineraryPlaceSearch } from "../../components/ItineraryPlaceSearch";
 import { useNetworkStatus } from "../../hooks/useNetworkStatus";
 import { useTrips } from "../../hooks/useTrips";
 import { dark, radius, shadow, spacing } from "../../theme";
@@ -458,7 +458,7 @@ export default function ItineraryScreen() {
           style={{ flex: 1 }}
           onLayout={(e) => setRootHeight(e.nativeEvent.layout.height)}
         >
-          <DestinationMap
+          <ItineraryMap
             fullscreen
             destinations={destinationsForSelectedDay}
             destinationCoords={combinedCoords}
@@ -489,7 +489,7 @@ export default function ItineraryScreen() {
             >
               <View style={s.sheetHeader}>
                 <Text style={s.sectionLabel}>{t("dayDestinations")}</Text>
-                <DestinationSearch onAddDestination={handleAddDestination} />
+                <ItineraryPlaceSearch onAddDestination={handleAddDestination} />
                 <Text style={s.sectionHint}>
                   {t("openRouteHint")}
                 </Text>

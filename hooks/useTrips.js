@@ -10,7 +10,6 @@ import {
 } from "../utils/notifications";
 import { createDefaultChecks, getDefaultCheckItems, loadChecks, loadLooks, loadTrips, saveChecks, saveLooks, saveTrips } from "../utils/storage";
 import { deleteCloudImages, isConfigured, loadFromCloud, saveToCloud, supabase } from "../utils/supabase";
-import { getVisaWarnings } from "../utils/visa";
 
 const TripContext = createContext();
 
@@ -55,9 +54,6 @@ export function TripProvider({ children }) {
         const hasChecks = c.some((ch) => ch.tripId === trip.id);
         if (!hasChecks) {
           const seeded = createDefaultChecks(trip.id, trip);
-          getVisaWarnings(trip.destinations ?? [], trip.origin ?? 'Brasil', trip.depart).forEach((w, i) => {
-            seeded.push({ id: `${trip.id}_visa_${i}`, tripId: trip.id, text: `Visto/autorização de entrada — ${w.message.split(':')[0]}`, cat: 'visa', done: false });
-          });
           c = [...c, ...seeded];
           dirty = true;
         }
@@ -180,9 +176,6 @@ export function TripProvider({ children }) {
     await saveTrips(next);
 
     const tripChecks = createDefaultChecks(id, trip);
-    getVisaWarnings(trip.destinations ?? [], trip.origin ?? 'Brasil', trip.depart).forEach((w, i) => {
-      tripChecks.push({ id: `${id}_visa_${i}`, tripId: id, text: `Visto/autorização de entrada — ${w.message.split(':')[0]}`, cat: 'visa', done: false });
-    });
     const nextChecks = [...checks, ...tripChecks];
     setChecks(nextChecks);
     await saveChecks(nextChecks);

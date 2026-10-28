@@ -4,7 +4,7 @@ An app for organizing trips you've already booked, designed for travelers who ge
 
 - flights, hotels, a day-by-day itinerary, checklist, budget and outfits
 - a countdown to departure
-- visa alerts
+- visa reminder
 
 Built with React Native, Expo and TypeScript, with Supabase sync.
 
@@ -18,11 +18,11 @@ Built with React Native, Expo and TypeScript, with Supabase sync.
 ### Create and edit a trip
 3-step form:
 
-1. **About the trip:** name, destinations (one at a time), passport country and departure and return dates, with the number of nights calculated automatically.
+1. **About the trip:** name, destinations (one at a time) and departure and return dates, with the number of nights calculated automatically.
 2. **Flights and hotels:**
    - Flights per destination: flight number and date. From the flight date on, the destination shows up in the itinerary automatically.
    - Hotels per destination: name, check-in/check-out dates and confirmation code.
-3. **Review:** trip summary, visa alerts and a preview of the generated checklist.
+3. **Review:** trip summary, a reminder to check visa requirements and a preview of the generated checklist.
 
 Trips can be edited or deleted later.
 
@@ -30,12 +30,10 @@ Trips can be edited or deleted later.
 - **Countdown** to departure in days, hours, minutes and seconds.
 - **Trip cover** with a photo from the gallery, which can be changed.
 - **World map** with pins on the destinations, plus the total number of destinations and nights.
-- **Visa alert** based on the passport and destinations (e.g. USA, Canada, India, Turkey, Vietnam).
 - **Checklist** generated automatically by category (docs, flight, hotel, outfits, visa and other). It adapts to the trip:
   - "Book hotel" if there's no accommodation yet
   - local cash for destinations where cash is widely used
   - vaccines for destinations that require them
-  - a visa application when needed
 
   You can also add your own items and check off completed ones.
 - **Accommodations** with a photo of the place (Google Street View), address, dates, nights, confirmation code and a Google Maps link.
@@ -102,7 +100,7 @@ app/
 components/          Maps, calendars, cards, pickers
 hooks/               useTrips (state and sync), useAuth, useCountdown, useNetworkStatus
 utils/               Integrations (supabase, currency, geocode, hotelDataService,
-                     flightService, unsplash, pinterest, visa, notifications)
+                     flightService, unsplash, pinterest, notifications)
 i18n/locales/        pt and en
 supabase_migration.sql, supabase_storage_migration.sql
 ```
